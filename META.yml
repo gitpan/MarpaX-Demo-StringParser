@@ -16,16 +16,16 @@ name: MarpaX-Demo-StringParser
 provides:
   MarpaX::Demo::StringParser:
     file: lib/MarpaX/Demo/StringParser.pm
-    version: 1.00
+    version: 1.01
   MarpaX::Demo::StringParser::Actions:
     file: lib/MarpaX/Demo/StringParser/Actions.pm
-    version: 1.00
+    version: 1.01
   MarpaX::Demo::StringParser::Config:
     file: lib/MarpaX/Demo/StringParser/Config.pm
-    version: 1.00
+    version: 1.01
   MarpaX::Demo::StringParser::Utils:
     file: lib/MarpaX/Demo/StringParser/Utils.pm
-    version: 1.00
+    version: 1.01
 requires:
   Algorithm::Diff: 1.1902
   Capture::Tiny: 0.11
@@ -55,4 +55,4 @@ requires:
   warnings: 0
 resources:
   license: http://www.perlfoundation.org/artistic_license_2_0
-version: 1.00
+version: 1.01

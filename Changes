@@ -1,4 +1,7 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+1.01  Tue Jul 23 17:52:00 2013
+	- Simplify the grammar and hence the code.
+
 1.00  Mon Jul 15 09:22:00 2013
 	  - Original version

@@ -96,7 +96,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 # ------------------------------------------------
 
@@ -282,7 +282,7 @@ source					=> \(<<'END_OF_SOURCE'),
 
 :start 					::= graph_grammar
 
-graph_grammar			::= graph_definition		action => graph
+graph_grammar			::= graph_definition	action => graph
 
 # Graph stuff.
 
@@ -302,7 +302,7 @@ node_name				::= start_node end_node
 :lexeme					~ start_node		pause => before		event => start_node
 start_node				~ '['
 
-:lexeme					~ end_node			pause => before		event => end_node
+:lexeme					~ end_node
 end_node				~ ']'
 
 # Edge stuff
@@ -332,7 +332,7 @@ attribute_statement		::= start_attributes end_attributes
 :lexeme					~ start_attributes	pause => before		event => start_attributes
 start_attributes		~ '{'
 
-:lexeme					~ end_attributes	pause => before		event => end_attributes
+:lexeme					~ end_attributes
 end_attributes			~ '}'
 
 # Boilerplate.
@@ -553,7 +553,6 @@ sub process
 	my($lexeme_name, $lexeme);
 	my($node_name);
 	my($span, $start);
-	my($value);
 
 	for
 	(
@@ -577,41 +576,31 @@ sub process
 		{
 			# Read the attribute_start lexeme, but don't do lexeme_read()
 			# at the bottom of the for loop, because we're just about
-			# to fiddle $pos to skip the attributes themselves.
-			# And that means we'll end up at the end_attributes lexeme.
+			# to fiddle $pos to skip the attributes.
 
 			$pos            = $self -> parser -> lexeme_read($lexeme_name);
-			$do_lexeme_read = 0;
-			$lexeme_name    = 'end_attributes';
 			$pos            = $self -> find_terminator(\$string, qr/}/, $start);
 			$attribute_list = substr($string, $start + 1, $pos - $start - 1);
+			$do_lexeme_read = 0;
 
 			print "index() => attribute list: $attribute_list\n" if ($self -> verbose > 1);
 
 			$self -> attribute_list($attribute_list);
 		}
-		elsif ($event_name eq 'end_attributes')
-		{
-		}
 		elsif ($event_name eq 'start_node')
 		{
 			# Read the node_start lexeme, but don't do lexeme_read()
 			# at the bottom of the for loop, because we're just about
-			# to fiddle $pos to skip the node's name itselvf.
-			# And that means we'll end up at the node_end lexeme.
+			# to fiddle $pos to skip the node's name.
 
 			$pos            = $self -> parser -> lexeme_read($lexeme_name);
-			$do_lexeme_read = 0;
-			$lexeme_name    = 'node_end';
 			$pos            = $self -> find_terminator(\$string, qr/]/, $start);
 			$node_name      = substr($string, $start + 1, $pos - $start - 1);
+			$do_lexeme_read = 0;
 
 			print "index() => node name: $node_name\n" if ($self -> verbose > 1);
 
 			$self -> node($node_name);
-		}
-		elsif ($event_name eq 'end_node')
-		{
 		}
 		elsif ($event_name eq 'directed_edge')
 		{
@@ -803,6 +792,62 @@ or:
 	make (or dmake or nmake)
 	make test
 	make install
+
+=head1 Scripts Shipped with this Module
+
+All scripts are shipped in the scripts/ directory.
+
+=over 4
+
+=item o copy.config.pl
+
+This is for use by the author. It just copies the config file out of the distro, so the script generate.index.pl
+(which uses HTML template stuff) can find it.
+
+=item o find.config.pl
+
+This cross-checks the output of copy.config.pl.
+
+=item o ge2tokens.pl
+
+This transforms all data/*.ge files into their corresponding data/*.tokens files.
+
+=item o generate.demo.sh
+
+This runs:
+
+=over 4
+
+=item o perl -Ilib scripts/ge2tokens.pl
+
+=item o perl -Ilib ~/bin/ge2svg.pl
+
+See the article mentioned in the Synopsis for this script.
+
+=item o perl -Ilib scripts/generate.index.pl
+
+=back
+
+And then copies the demo output to my dev web server's doc root, where I can inspect it.
+
+=item o generate.index.pl
+
+This constructs a web page containing all the html/*.svg files.
+
+=item o parse.pl
+
+This runs a parse on a single input file. Run .parse.pl -h' for details.
+
+=item o parse.sh
+
+This simplifies running parse.pl.
+
+=item o pod2html.sh
+
+This converts all lib/*.pm files into their corresponding *.html versions, for proof-reading and uploading
+to my real web site.
+
+=back
 
 =head1 Constructor and Initialization
 
