@@ -1,0 +1,9 @@
+digraph Perl
+{
+graph [ rankdir="TB" ]
+node [ shape="oval" ]
+edge [ color="grey" ]
+"dummy.prefix.node" [ color="invis" label="" ]
+"dummy.suffix.node" [ color="invis" label="" ]
+"dummy.prefix.node" -> "dummy.suffix.node" [ color="cornflowerblue" label="Use various escaped chars (\' \" \< \>) in label" ]
+}

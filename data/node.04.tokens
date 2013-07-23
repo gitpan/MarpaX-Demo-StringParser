@@ -1,0 +1,5 @@
+"key","name","value"
+"node","node.1",""
+"attribute","label","A and B"
+"node","node.2",""
+"attribute","label","A or B"

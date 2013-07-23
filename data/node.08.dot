@@ -1,0 +1,13 @@
+digraph Perl
+{
+graph [ rankdir="TB" ]
+node [ shape="oval" ]
+edge [ color="grey" ]
+"node.1"
+"" [ color="invis" label="Some node" ]
+"node.2"
+"node.1" -> "" [ arrowhead="odot" arrowtail="ediamond" color="green" dir="both" label="A 1" penwidth="1" ]
+"node.1" -> "" [ color="blue" label="B 2" penwidth="3" ]
+"node.1" -> "" [ arrowhead="box" arrowtail="invdot" color="maroon" dir="both" label="C 3" penwidth="5" ]
+"" -> "node.2" [ label="" ]
+}

@@ -1,0 +1,10 @@
+digraph Perl
+{
+graph [ rankdir="TB" ]
+node [ shape="oval" ]
+edge [ color="grey" ]
+"dummy.prefix.node" [ color="invis" label="" ]
+"dummy.suffix.node" [ color="invis" label="" ]
+"dummy.prefix.node" -> "dummy.suffix.node" [ color="cornflowerblue" label="Top row\nBottom row" ]
+"dummy.prefix.node" -> "dummy.suffix.node" [ color="red" label="Edges use cornflowerblue and red" ]
+}

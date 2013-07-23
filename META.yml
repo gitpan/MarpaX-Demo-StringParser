@@ -1,0 +1,58 @@
+---
+abstract: 'Conditional preservation of whitespace while parsing'
+author:
+  - 'Ron Savage <ron@savage.net.au>'
+build_requires:
+  Test::More: 0.94
+configure_requires:
+  Module::Build: 0.38
+dynamic_config: 1
+generated_by: 'Module::Build version 0.4005, CPAN::Meta::Converter version 2.131560'
+license: artistic_2
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: MarpaX-Demo-StringParser
+provides:
+  MarpaX::Demo::StringParser:
+    file: lib/MarpaX/Demo/StringParser.pm
+    version: 1.00
+  MarpaX::Demo::StringParser::Actions:
+    file: lib/MarpaX/Demo/StringParser/Actions.pm
+    version: 1.00
+  MarpaX::Demo::StringParser::Config:
+    file: lib/MarpaX/Demo/StringParser/Config.pm
+    version: 1.00
+  MarpaX::Demo::StringParser::Utils:
+    file: lib/MarpaX/Demo/StringParser/Utils.pm
+    version: 1.00
+requires:
+  Algorithm::Diff: 1.1902
+  Capture::Tiny: 0.11
+  Config: 0
+  Config::Tiny: 2.14
+  Date::Simple: 3.03
+  File::Basename: 2.78
+  File::Copy: 2.21
+  File::HomeDir: 0.99
+  File::Spec: 3.33
+  Getopt::Long: 2.38
+  HTML::Entities::Interpolate: 1.04
+  Marpa::R2: 2.064
+  Moo: 1.002
+  Path::Tiny: 0.025
+  Perl6::Slurp: 0.03
+  Pod::Usage: 1.36
+  Set::Array: 0.23
+  Text::CSV: 1.32
+  Text::CSV::Slurp: 1.01
+  Text::Xslate: 1.4001
+  Try::Tiny: 0.09
+  charnames: 0
+  open: 0
+  strict: 0
+  utf8: 0
+  warnings: 0
+resources:
+  license: http://www.perlfoundation.org/artistic_license_2_0
+version: 1.00

@@ -1,0 +1,17 @@
+digraph Perl
+{
+graph [ rankdir="TB" ]
+node [ shape="oval" ]
+edge [ color="grey" ]
+"node.1" [ label="n 1" ]
+"" [ color="invis" label="n 2" ]
+"node.3" [ label="n 3" ]
+"" [ color="invis" label="n 2" ]
+"dummy.suffix.node" [ color="invis" label="" ]
+"node.1" -> "" [ label="e 1" ]
+"node.1" -> "" [ label="e 2" ]
+"" -> "node.3" [ label="e 3" ]
+"node.3" -> "" [ label="e 4" ]
+"node.3" -> "" [ label="e 5" ]
+"" -> "dummy.suffix.node" [ label="e 6" ]
+}

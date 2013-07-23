@@ -1,0 +1,4 @@
+"key","name","value"
+"edge","->",""
+"attribute","color","cornflowerblue"
+"attribute","label","This edge's color is blueish"

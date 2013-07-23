@@ -1,0 +1,4 @@
+"key","name","value"
+"edge","->",""
+"attribute","color","cornflowerblue"
+"attribute","label","Use various escaped chars (\' \"" \< \>) in label"
