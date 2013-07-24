@@ -11,7 +11,6 @@ use Config;
 
 use Date::Simple;
 
-use File::Basename; # For basename().
 use File::Spec;
 
 use MarpaX::Demo::StringParser::Config;
@@ -34,7 +33,7 @@ has config =>
 );
 
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # ------------------------------------------------
 
@@ -131,27 +130,6 @@ sub generate_demo_index
 
 } # End of generate_demo_index.
 
-# ------------------------------------------------
-
-sub get_files
-{
-	my($self, $dir_name, $type) = @_;
-
-	opendir(INX, $dir_name);
-	my(@file) = sort grep{/$type$/} readdir INX;
-	closedir INX;
-
-	my(%file);
-
-	for my $file_name (@file)
-	{
-		$file{basename($file_name, ".$type")} = $file_name;
-	}
-
-	return %file;
-
-} # End of get_files.
-
 # -----------------------------------------------
 
 1;
@@ -244,12 +222,6 @@ Calls L</get_files($dir_name, $type)> and L</generate_demo_environment()>.
 Writes C<html/index.html>.
 
 See scripts/generate.index.pl.
-
-=head2 get_files($dir_name, $type)
-
-Returns a list of files from the given $dir_name, whose type (extension) matches $type.
-
-See scripts/dot2svg.pl and scripts/ge2svg.pl.
 
 =head1 Version Numbers
 

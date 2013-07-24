@@ -64,7 +64,7 @@ has items =>
 	required => 0,
 );
 
-has parser =>
+has recce =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
@@ -96,7 +96,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # ------------------------------------------------
 
@@ -344,7 +344,7 @@ END_OF_SOURCE
 		})
 	);
 
-	$self -> parser
+	$self -> recce
 	(
 		Marpa::R2::Scanless::R -> new
 		({
@@ -556,21 +556,22 @@ sub process
 
 	for
 	(
-		my $pos = $self -> parser -> read(\$string);
+		my $pos = $self -> recce -> read(\$string);
 		$pos < $length;
-		$pos = $self -> parser -> resume($pos)
+		$pos = $self -> recce -> resume($pos)
 	)
 	{
 		print "read() => pos: $pos\n" if ($self -> verbose > 1);
 
 		$do_lexeme_read = 1;
-		@event          = @{$self -> parser -> events};
+		@event          = @{$self -> recce -> events};
 		$event_name     = ${$event[0]}[0];
-		($start, $span) = $self -> parser -> pause_span;
-		$lexeme_name    = $self -> parser -> pause_lexeme;
-		$lexeme         = $self -> parser -> literal($start, $span);
+		($start, $span) = $self -> recce -> pause_span;
+		$lexeme_name    = $self -> recce -> pause_lexeme;
+		$lexeme         = $self -> recce -> literal($start, $span);
 
-		print "pause_span($lexeme_name) => start: $start. span: $span. lexeme: $lexeme. event: $event_name\n" if ($self -> verbose > 1);
+		print "pause_span($lexeme_name) => start: $start. span: $span. " .
+			"lexeme: $lexeme. event: $event_name\n" if ($self -> verbose > 1);
 
 		if ($event_name eq 'start_attributes')
 		{
@@ -578,7 +579,7 @@ sub process
 			# at the bottom of the for loop, because we're just about
 			# to fiddle $pos to skip the attributes.
 
-			$pos            = $self -> parser -> lexeme_read($lexeme_name);
+			$pos            = $self -> recce -> lexeme_read($lexeme_name);
 			$pos            = $self -> find_terminator(\$string, qr/}/, $start);
 			$attribute_list = substr($string, $start + 1, $pos - $start - 1);
 			$do_lexeme_read = 0;
@@ -593,7 +594,7 @@ sub process
 			# at the bottom of the for loop, because we're just about
 			# to fiddle $pos to skip the node's name.
 
-			$pos            = $self -> parser -> lexeme_read($lexeme_name);
+			$pos            = $self -> recce -> lexeme_read($lexeme_name);
 			$pos            = $self -> find_terminator(\$string, qr/]/, $start);
 			$node_name      = substr($string, $start + 1, $pos - $start - 1);
 			$do_lexeme_read = 0;
@@ -612,17 +613,17 @@ sub process
 		}
 		else
 		{
-			die "Unexpected lexeme '$event_name' without a pause\n";
+			die "Unexpected lexeme '$lexeme_name' with a pause\n";
 		}
 
-		$pos = $self -> parser -> lexeme_read($lexeme_name) if ($do_lexeme_read);
+		$pos = $self -> recce -> lexeme_read($lexeme_name) if ($do_lexeme_read);
 
 		print "lexeme_read($lexeme_name) => $pos\n" if ($self -> verbose > 1);
     }
 
 	# Return a defined value for success and undef for failure.
 
-	return $self -> parser -> value;
+	return $self -> recce -> value;
 
 } # End of process.
 

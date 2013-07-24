@@ -9,7 +9,7 @@ use charnames qw(:full :short);  # Unneeded in v5.16.
 
 use Capture::Tiny 'capture';
 
-use MarpaX::Demo::StringParser::Utils;
+use MarpaX::Demo::StringParser::Filer;
 
 use Path::Tiny; # For path().
 
@@ -19,7 +19,7 @@ use Try::Tiny;
 
 my($data_dir_name) = 'data';
 my($out_dir_name)  = $data_dir_name;
-my(%ge_files)      = MarpaX::Demo::StringParser::Utils -> new -> get_files($data_dir_name, 'ge');
+my(%ge_files)      = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, 'ge');
 my($script)        = path('scripts', 'parse.pl');
 
 my($stdout, $stderr);

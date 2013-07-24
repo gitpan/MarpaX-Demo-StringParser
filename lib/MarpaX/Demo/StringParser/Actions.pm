@@ -21,7 +21,7 @@ our $items;
 
 our $verbose;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 # ------------------------------------------------
 

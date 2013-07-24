@@ -10,7 +10,7 @@ use Capture::Tiny 'capture';
 use File::Spec;
 use File::Temp;
 
-use MarpaX::Demo::StringParser::Utils;
+use MarpaX::Demo::StringParser::Filer;
 
 use Path::Tiny; # For path().
 
@@ -33,7 +33,7 @@ my($temp_dir)      = File::Temp -> newdir('temp.XXXX', CLEANUP => 1, EXLOCK => 0
 my($temp_dir_name) = $temp_dir -> dirname;
 $temp_dir_name     = '/tmp/m';
 my($script)        = path('scripts', 'parse.pl');
-my(%ge_name)       = MarpaX::Demo::StringParser::Utils -> new -> get_files($data_dir_name, $in_suffix);
+my(%ge_name)       = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, $in_suffix);
 
 my($command);
 my(@diff, $diff_count);
