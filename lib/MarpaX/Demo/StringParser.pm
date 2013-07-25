@@ -16,8 +16,6 @@ use Marpa::R2;
 
 use Moo;
 
-use Regexp::Common qw/balanced delimited/;
-
 use Set::Array;
 
 use Text::CSV;
@@ -96,7 +94,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 # ------------------------------------------------
 

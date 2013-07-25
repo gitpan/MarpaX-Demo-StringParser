@@ -35,6 +35,7 @@ WriteMakefile
 		File::Copy       => 2.21,
 		File::HomeDir    => 0.99,
 		File::Spec       => 3.33,
+		File::Temp       => 0.2301,
 		Getopt::Long     => 2.38,
 		HTML::Entities::Interpolate => 1.04,
 		Marpa::R2        => 2.064000,

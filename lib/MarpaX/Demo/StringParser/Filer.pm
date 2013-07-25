@@ -11,7 +11,7 @@ use File::Basename; # For basename().
 
 use Moo;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 # ------------------------------------------------
 
@@ -47,8 +47,6 @@ L<MarpaX::Demo::StringParser::Filer> - Utils used by MarpaX::Demo::StringParser
 =head1 Synopsis
 
 See scripts/ge2tokens.pl and t/ge2tokens.t.
-
-See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for sample output.
 
 =head1 Description
 
