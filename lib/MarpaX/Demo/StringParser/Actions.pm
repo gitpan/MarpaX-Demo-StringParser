@@ -21,26 +21,7 @@ our $items;
 
 our $verbose;
 
-our $VERSION = '1.03';
-
-# ------------------------------------------------
-
-sub edge
-{
-	my($stash, $edge_name) = @_;
-
-	print "Edge: $edge_name\n" if ($verbose);
-
-	$items -> push
-	({
-		name  => $edge_name,
-		type  => 'edge',
-		value => '',
-	});
-
-	return $edge_name;
-
-} # End of edge.
+our $VERSION = '1.04';
 
 # --------------------------------------------------
 

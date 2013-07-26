@@ -31,7 +31,6 @@ my($test_count)    = 0;
 
 my($temp_dir)      = File::Temp -> newdir('temp.XXXX', CLEANUP => 1, EXLOCK => 0, TMPDIR => 1);
 my($temp_dir_name) = $temp_dir -> dirname;
-$temp_dir_name     = '/tmp/m';
 my($script)        = path('scripts', 'parse.pl');
 my(%ge_name)       = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, $in_suffix);
 

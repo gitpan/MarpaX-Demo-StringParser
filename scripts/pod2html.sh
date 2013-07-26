@@ -1,10 +1,10 @@
 #!/bin/bash
 
-DEST=$DR/Perl-modules/html/MarpaX/Demo
+NAME=MarpaX/Demo/StringParser
+export NAME
 
-mkdir -p $DEST/StringParser
-
-pod2html.pl -i lib/MarpaX/Demo/StringParser.pm         -o $DEST/StringParser.html
-pod2html.pl -i lib/MarpaX/Demo/StringParser/Actions.pm -o $DEST/StringParser/Actions.html
-pod2html.pl -i lib/MarpaX/Demo/StringParser/Config.pm  -o $DEST/StringParser/Config.html
-pod2html.pl -i lib/MarpaX/Demo/StringParser/Utils.pm   -o $DEST/StringParser/Utils.html
+pod2html.pl -i lib/$NAME.pm         -o /dev/shm/html/Perl-modules/html/$NAME.html
+pod2html.pl -i lib/$NAME/Actions.pm -o /dev/shm/html/Perl-modules/html/$NAME/Actions.html
+pod2html.pl -i lib/$NAME/Config.pm  -o /dev/shm/html/Perl-modules/html/$NAME/Config.html
+pod2html.pl -i lib/$NAME/Filer.pm   -o /dev/shm/html/Perl-modules/html/$NAME/Filer.html
+pod2html.pl -i lib/$NAME/Utils.pm   -o /dev/shm/html/Perl-modules/html/$NAME/Utils.html

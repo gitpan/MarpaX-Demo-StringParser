@@ -94,7 +94,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 # ------------------------------------------------
 
@@ -352,6 +352,23 @@ END_OF_SOURCE
 
 } # End of BUILD.
 
+# ------------------------------------------------
+
+sub edge
+{
+	my($self, $edge_name) = @_;
+
+	print "Edge: $edge_name\n" if ($self -> verbose);
+
+	$self -> items -> push
+	({
+		name  => $edge_name,
+		type  => 'edge',
+		value => '',
+	});
+
+} # End of edge.
+
 # -----------------------------------------------
 # $target is either qr/]/ or qr/}/, and allows us to handle
 # both node names and either edge or node attributes.
@@ -359,8 +376,8 @@ END_OF_SOURCE
 
 sub find_terminator
 {
-	my($self, $string, $target, $start) = @_;
-	my(@char)   = split(//, substr($$string, $start) );
+	my($self, $stringref, $target, $start) = @_;
+	my(@char)   = split(//, substr($$stringref, $start) );
 	my($offset) = 0;
 	my($quote)  = '';
 	my($angle)  = 0; # Set to 1 if inside <<...>>.
@@ -603,11 +620,11 @@ sub process
 		}
 		elsif ($event_name eq 'directed_edge')
 		{
-			MarpaX::Demo::StringParser::Actions::edge({}, $lexeme);
+			$self -> edge($lexeme);
 		}
 		elsif ($event_name eq 'undirected_edge')
 		{
-			MarpaX::Demo::StringParser::Actions::edge({}, $lexeme);
+			$self -> edge($lexeme);
 		}
 		else
 		{
@@ -752,19 +769,31 @@ You can use scripts/parse.sh to simplify this process:
 
 See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for sample output.
 
-Also, there is L<an article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html> based on this module.
+Also, there is L<an article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html> based on
+this module.
 
 =head1 Description
 
-This module a demonstration of how to use L<Marpa::R2>'s capabilities to have the parser within Marpa call back to code
-in your own module, to handle certain cases where you don't want Marpa's default processing to occur.
+This module demonstrations how to use L<Marpa::R2>'s capabilities to have Marpa repeatedly pass control back to code
+in your own module, during the parse, to handle certain cases where you don't want Marpa's default processing to occur.
 
-A classic case of this is when you wish to preserve whitespace in some contexts, but also want Marpa to discard
-whitespace in all other contexts.
+Specifically, it deals with the classic case of when you wish to preserve whitespace in some contexts, but also
+want Marpa to discard whitespace in all other contexts.
 
-Specifically, L<MarpaX::Demo::StringParser> is a cut-down version of L<Graph::Easy::Marpa> V 2.00, and (the former)
+Note that this module's usage of Marpa's adverbs I<event> and I<pause> should be regarded as an intermediate/advanced
+technique. For people just beginning to use Marpa, use of the I<action> adverb is the recommended technique.
+
+The article mentioned above discusses important issues regarding the timing sequence of I<pauses> and I<actions>.
+
+All this assumes a relatively recent version of Marpa, one in which its Scanless interface (SLIF) is implemented.
+All my development was done using L<Marpa::R2> V 2.064000.
+
+Lastly, L<MarpaX::Demo::StringParser> is a cut-down version of L<Graph::Easy::Marpa> V 2.00, and (the former)
 provides a Marpa-based parser for parts of L<Graph::Easy>-style graph definitions. The latter module handles the whole
-language.
+Graph::Easy language.
+
+In pragmatic terms, the code in the current module was developed for inclusion in Graph::Easy::Marpa, which in turn is
+a pre-processor for the L<DOT|http://graphviz.org/content/dot-language> language.
 
 =head1 Installation
 
@@ -870,6 +899,8 @@ See also the 'input_file' key which reads the graph from a file.
 
 The 'description' key takes precedence over the 'input_file' key.
 
+Default: ''.
+
 =item o input_file => $graph_file_name
 
 Read the graph definition from this file.
@@ -882,9 +913,13 @@ The first lines of the file can start with /^\s*#/, and will be discarded as com
 
 The 'description' key takes precedence over the 'input_file' key.
 
+Default: ''.
+
 =item o report_tokens => $Boolean
 
-Calls L</report()> to report, via the log, the items recognized by the parser.
+When set to 1, calls L</report()> to print the items recognized by the parser.
+
+Default: 0.
 
 =item o token_file => $file_name
 
@@ -898,18 +933,19 @@ Default: ''.
 
 Prints more (1, 2) or less (0) progress messages.
 
+Default: 0.
+
 =back
 
 =head1 Methods
 
-=head2 attribute_list($attribute_string)
+=head2 attribute_list($attribute_list)
 
 Returns nothing.
 
-Processes the attribute string returned by L<Marpa::R2> when it pauses during the processing of a set of
-attributes.
+Processes the attribute string found when Marpa pauses during the processing of a set of attributes.
 
-Then, pushes this set of attributes onto a stack.
+Then, pushes these attributes onto a stack.
 
 The stack's elements are documented below in L</FAQ> under L</How is the parsed graph stored in RAM?>.
 
@@ -923,7 +959,34 @@ The value supplied to the description() method takes precedence over the value r
 
 Also, C<description> is an option to new().
 
-=head2 format($item)
+=head2 edge($edge_name)
+
+Returns nothing.
+
+Processes the edge name string returned by L<Marpa::R2> when it pauses during the processing of '->' or '--'.
+
+Pushes this edge name onto a stack.
+
+The stack's elements are documented below in the L</FAQ> under L</How is the parsed graph stored in RAM?>.
+
+=head2 find_terminator($stringref, $target, $start)
+
+Returns the offset into $stringref at which the $target is found.
+
+$stringref is a refererence to the input string (stream).
+
+$target is a regexp specifying the closing delimiter to search for.
+
+For attributes, it is qr/}/, and for nodes, $target is qr/]/.
+
+$start is the offset into $stringref at which to start searching. It's assumed to be pointed to the opening
+delimiter when this method is called, since the value is $start is set by Marpa when it pauses based on the
+I<pause => before> construct in the grammar.
+
+The return value allows the calling code to extract the substring between the opening and closing delimiters,
+and to process it in either L</attribute_list($attribute_list)> or L</node($node_name)>.
+
+=head2 format_token($item)
 
 Returns a string containing a nicely formatted version of the keys and values of the hashref $item.
 
@@ -953,12 +1016,6 @@ Called as appropriate by run().
 =head2 grammar()
 
 Returns an object of type L<Marpa::R2::Scanless::G>.
-
-=head2 graph([$graph])
-
-Here, the [] indicate an optional parameter.
-
-Gets or sets the value of the graph definition string.
 
 =head2 graph_text([$graph])
 
@@ -998,6 +1055,8 @@ Returns an object of type L<Marpa::R2::Scanless::R>.
 
 =head2 process()
 
+Returns the result of calling Marpa's value() method.
+
 Does the real work. Called by run() after processing the user's options.
 
 =head2 renumber_items()
@@ -1031,6 +1090,11 @@ Gets or sets the value which determines how many progress reports are printed.
 Also, C<verbose> is an option to new().
 
 =head1 FAQ
+
+=head2 How do I reconcile Marpa's approach with classic lexing and parsing?
+
+I've attempted to explain how they mesh in
+L<this article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html#Constructing_a_Mental_Picture_of_Lexing_and_Parsing>.
 
 =head2 Does this module handle utf8?
 
@@ -1068,7 +1132,7 @@ And now the details:
 
 =item o Comments
 
-The first lines of the input file can start with /^\s*#/, and will be discarded as comments.
+The first few lines of the input file can start with /^\s*#/, and will be discarded as comments.
 
 =item o Line-breaks
 
@@ -1076,9 +1140,9 @@ These are converted into a single space.
 
 =item o Nodes
 
-Nodes are delimited by the quote characters '[' and ']'.
+Nodes are delimited by '[' and ']'.
 
-Within the quotes, any printable character can be used for a node's name.
+Within those, any printable character can be used for a node's name.
 
 Some literals - ']', '"', "'" - can be used in the node's value, but they must satisfy one of these
 conditions:
@@ -1125,13 +1189,13 @@ Samples:
 
 Both nodes and edges can have any number of attributes.
 
-Attributes are delimited by the quote characters '{' and '}'.
+Attributes are delimited by '{' and '}'.
 
 These attributes are listed immdiately after their owing node or edge.
 
 Each attribute consists of a key:value pair, where ':' must appear literally.
 
-These key:value pairs must be separated by the ';' character.
+These key:value pairs must be separated by the ';' character. A trailing ';' is optional.
 
 The values for 'key' are reserved words used by Graphviz's L<attributes|http://graphviz.org/content/attrs>.
 These keys satisy the regexp /^[a-zA-Z_]+$/.
@@ -1195,9 +1259,7 @@ For more samples, see the data/*.ge files shipped with the distro.
 
 =head2 How is the parsed graph stored in RAM?
 
-Items are stored in an arrayref managed by L<Set::Array>.
-
-This arrayref is available via the L</items()> method.
+Items are stored in an arrayref managed by L<Set::Array>. This arrayref is available via the L</items()> method.
 
 Each element in the array is a hashref, listed here in alphabetical order by type.
 
@@ -1217,7 +1279,7 @@ An attribute can belong to a node or an edge. An attribute definition of
 		value => 'red',
 	}
 
-An attribute definition of '{color: red; shape: circle;}' will produce 2 hashrefs,
+An attribute definition of '{color: red; shape: circle}' will produce 2 hashrefs,
 i.e. 2 sequential elements in the arrayref:
 
 	{
@@ -1280,11 +1342,15 @@ Each anonymous node will have at least these 2 attributes:
 You can of course give your anonymous nodes any attributes, but they will be forced to have
 these attributes.
 
+E.g. If you give it a color, that would become element $n + 2 in the arrayref, and hence the color would override
+the default color 'invis'. See the output for data/node.03.ge on
+L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
+
 Node names are case-sensitive in C<dot>, but that does not matter within the context of this module.
 
 =back
 
-=head2 Where are the actions named in the grammar?
+=head2 Where are the action subs named in the grammar?
 
 In L<MarpaX::Demo::StringParser::Actions>.
 

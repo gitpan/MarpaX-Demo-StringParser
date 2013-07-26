@@ -1,5 +1,16 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+1.04  Fri Jul 26 09:47:00 2013
+	- Remove hard-coded temp dir name from t/ge2tokens.t, which was left over from testing the testing code.
+	- Move sub edge() from Actions.pm into StringParser.pm, because it's never called by Marpa as an action.
+		It was left in Actions.pm to simplify my switching back-and-forth between actions and pauses as I
+		studied the behaviour of these 2 mechanisms.
+	- Document that my usage of pauses is more of an intermediate/advanced usage rather than something for
+		beginners.
+	- Re-write docs where lexing and parsing is discussed, vis-a-vis the Marpa view of processing.
+		This re-write also applies to the accompanying article mentioned in the docs.
+	- Expand docs describing the methods. Some methods were not included in previous documentation.
+
 1.03  Thu Jul 25 12:10:00 2013
 	- Remove Regexp::Common from being 'use'd by MarpaX::Demo::StringParser. It was not used.
 	- Add File::Temp to the pre-reqs.
