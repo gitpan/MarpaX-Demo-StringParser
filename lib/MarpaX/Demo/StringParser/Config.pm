@@ -39,7 +39,7 @@ has section =>
 	required => 0,
 );
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 # -----------------------------------------------
 
@@ -147,9 +147,9 @@ If the file can't be read, C<die $string> is called.
 
 The path to the config file is determined by:
 
-	Path::Class::file(File::HomeDir -> my_dist_config('MarpaX-Demo-StringParser'), '.htmarpax.demo.stringparser.conf');
+	path(File::HomeDir -> my_dist_config('MarpaX-Demo-StringParser'), '.htmarpax.demo.stringparser.conf');
 
-During installation, you should have run scripts/copy.config.pl, which uses the same code, to move the config file
+The author runs scripts/copy.config.pl, which uses similar code, to move the config file
 from the config/ directory in the disto into an OS-dependent directory.
 
 The run-time code uses this module to look in the same directory as used by scripts/copy.config.pl.

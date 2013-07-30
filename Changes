@@ -1,5 +1,15 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+1.05  Mon Jul 29 14:42:00 2013
+	- Simplify the code in Actions.pm.
+	- Add Marpa's homepage to the FAQ.
+	- Fix the description in the FAQ where it described the grammar parsed as a version of DOT when it's actually
+		a version of Graph::Easy::Marpa.
+	- Add data/edge.06.* and html/edge.06.svg to demonstrate juxtaposition of edges without spaces.
+	- Patch MarpaX::Demo::StringParser::Utils to call get_files() from MarpaX::Demo::StringParser::Filer, now
+		that that method has been shifted out of *::Utils.
+	- Clean up the docs in various ways.
+
 1.04  Fri Jul 26 09:47:00 2013
 	- Remove hard-coded temp dir name from t/ge2tokens.t, which was left over from testing the testing code.
 	- Move sub edge() from Actions.pm into StringParser.pm, because it's never called by Marpa as an action.

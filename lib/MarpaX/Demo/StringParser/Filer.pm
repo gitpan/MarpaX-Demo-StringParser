@@ -11,7 +11,7 @@ use File::Basename; # For basename().
 
 use Moo;
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 # ------------------------------------------------
 

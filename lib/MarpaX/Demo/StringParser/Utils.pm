@@ -14,6 +14,7 @@ use Date::Simple;
 use File::Spec;
 
 use MarpaX::Demo::StringParser::Config;
+use MarpaX::Demo::StringParser::Filer;
 
 use HTML::Entities::Interpolate;
 
@@ -33,7 +34,7 @@ has config =>
 );
 
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 # ------------------------------------------------
 
@@ -62,7 +63,7 @@ sub generate_demo_index
 	my($self)          = @_;
 	my($data_dir_name) = 'data';
 	my($html_dir_name) = 'html';
-	my(%data_file)     = $self -> get_files($data_dir_name, 'ge');
+	my(%data_file)     = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, 'ge');
 
 	my($html_name);
 	my($line, @line);
@@ -217,7 +218,7 @@ Called by L</generate_demo_index()>.
 
 =head2 generate_demo_index()
 
-Calls L</get_files($dir_name, $type)> and L</generate_demo_environment()>.
+Calls L<MarpaX::Demo::StringParser::Filer/get_files($dir_name, $type)> and L</generate_demo_environment()>.
 
 Writes C<html/index.html>.
 

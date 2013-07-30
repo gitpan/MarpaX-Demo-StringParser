@@ -94,7 +94,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 # ------------------------------------------------
 
@@ -258,10 +258,6 @@ sub BUILD
 	my($self) = @_;
 
 	$self -> items(Set::Array -> new);
-
-	# Ensure we can stack from the action_object.
-
-	$MarpaX::Demo::StringParser::Actions::items = $self -> items;
 
 	# Ensure we can report from the action_object.
 
@@ -754,9 +750,7 @@ L<MarpaX::Demo::StringParser> - Conditional preservation of whitespace while par
 
 Typical usage:
 
-	perl -Ilib scripts/parse.pl -d '[noddy]{color:blue}' -r 1 -v 1 -t output.tokens
-
-Complex graphs work too: Try -d '[node.1]{a:b;c:d}->{e:f;}->{g:h}[node.2]{i:j}->[node.3]{k:l}'
+	perl -Ilib scripts/parse.pl -d '[node]{color:blue; label: "Node name"}' -r 1 -v 1 -t output.tokens
 
 The following refer to data shipped with the distro:
 
@@ -789,11 +783,14 @@ All this assumes a relatively recent version of Marpa, one in which its Scanless
 All my development was done using L<Marpa::R2> V 2.064000.
 
 Lastly, L<MarpaX::Demo::StringParser> is a cut-down version of L<Graph::Easy::Marpa> V 2.00, and (the former)
-provides a Marpa-based parser for parts of L<Graph::Easy>-style graph definitions. The latter module handles the whole
-Graph::Easy language.
+provides a Marpa-based parser for parts of L<Graph::Easy::Marpa>-style graph definitions. The latter module handles
+the whole Graph::Easy::Marpa language.
 
-In pragmatic terms, the code in the current module was developed for inclusion in Graph::Easy::Marpa, which in turn is
-a pre-processor for the L<DOT|http://graphviz.org/content/dot-language> language.
+See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?> for details.
+And see below, L</What is the grammar parsed by this module?>, for details of the parts supported by this module.
+
+In pragmatic terms, the code in the current module was developed for inclusion in L<Graph::Easy::Marpa>, which in
+turn is a pre-processor for the L<DOT|http://graphviz.org/content/dot-language> language.
 
 =head1 Installation
 
@@ -850,13 +847,14 @@ This runs:
 
 =item o perl -Ilib ~/bin/ge2svg.pl
 
-See the article mentioned in the Synopsis for this script.
+See the article mentioned in the Synopsis for details on this script. Briefly, it is not included in the distro
+because it has Graph::Easy::Marpa::Renderer::GraphViz2 as a pre-req.
 
 =item o perl -Ilib scripts/generate.index.pl
 
 =back
 
-And then copies the demo output to my dev web server's doc root, where I can inspect it.
+And then generate.demo.sh copies the demo output to my dev web server's doc root, where I can cross-check it.
 
 =item o generate.index.pl
 
@@ -895,9 +893,9 @@ Specify a string for the graph definition.
 You are strongly encouraged to surround this string with '...' to protect it from your shell if using
 this module directly from the command line.
 
-See also the 'input_file' key which reads the graph from a file.
+See also the I<input_file> key which reads the graph from a file.
 
-The 'description' key takes precedence over the 'input_file' key.
+The I<description> key takes precedence over the I<input_file> key.
 
 Default: ''.
 
@@ -905,13 +903,13 @@ Default: ''.
 
 Read the graph definition from this file.
 
-See also the 'graph' key to read the graph from the command line.
+See also the I<description> key to read the graph from the command line.
 
-The whole file is slurped in as 1 graph.
+The whole file is slurped in as a single graph.
 
 The first lines of the file can start with /^\s*#/, and will be discarded as comments.
 
-The 'description' key takes precedence over the 'input_file' key.
+The I<description> key takes precedence over the I<input_file> key.
 
 Default: ''.
 
@@ -955,9 +953,11 @@ Here, the [] indicate an optional parameter.
 
 Gets or sets the graph string to be parsed.
 
+See also the L</input_file([$graph_file_name])> method.
+
 The value supplied to the description() method takes precedence over the value read from the input file.
 
-Also, C<description> is an option to new().
+Also, I<description> is an option to new().
 
 =head2 edge($edge_name)
 
@@ -981,7 +981,7 @@ For attributes, it is qr/}/, and for nodes, $target is qr/]/.
 
 $start is the offset into $stringref at which to start searching. It's assumed to be pointed to the opening
 delimiter when this method is called, since the value is $start is set by Marpa when it pauses based on the
-I<pause => before> construct in the grammar.
+C<< 'pause => before' >> construct in the grammar.
 
 The return value allows the calling code to extract the substring between the opening and closing delimiters,
 and to process it in either L</attribute_list($attribute_list)> or L</node($node_name)>.
@@ -1002,14 +1002,14 @@ Writes a CSV file of tokens output by the parse if new() was called with the C<t
 
 =head2 get_graph_from_command_line()
 
-If the caller has requested a graph be parsed from the command line, with the description option to new(),
+If the caller has requested a graph be parsed from the command line, with the I<description> option to new(),
 get it now.
 
 Called as appropriate by run().
 
 =head2 get_graph_from_file()
 
-If the caller has requested a graph be parsed from a file, with the input_file option to new(), get it now.
+If the caller has requested a graph be parsed from a file, with the I<input_file> option to new(), get it now.
 
 Called as appropriate by run().
 
@@ -1029,15 +1029,15 @@ Here, the [] indicate an optional parameter.
 
 Gets or sets the name of the file to read the graph definition from.
 
-See also the description() method.
+See also the L</description([$graph])> method.
 
-The whole file is slurped in as 1 graph.
+The whole file is slurped in as a single graph.
 
-The first lines of the file can start with /^\s*#/, and will be discarded as comments.
+The first few lines of the file can start with /^\s*#/, and will be discarded as comments.
 
 The value supplied to the description() method takes precedence over the value read from the input file.
 
-Also, C<input_file> is an option to new().
+Also, I<input_file> is an option to new().
 
 =head2 node()
 
@@ -1049,15 +1049,15 @@ Then, pushes this node name onto a stack.
 
 The stack's elements are documented below in the L</FAQ> under L</How is the parsed graph stored in RAM?>.
 
-=head2 parser()
-
-Returns an object of type L<Marpa::R2::Scanless::R>.
-
 =head2 process()
 
 Returns the result of calling Marpa's value() method.
 
 Does the real work. Called by run() after processing the user's options.
+
+=head2 recce()
+
+Returns an object of type L<Marpa::R2::Scanless::R>.
 
 =head2 renumber_items()
 
@@ -1069,11 +1069,11 @@ Reports (prints) the list of items recognized by the parser.
 
 =head2 report_tokens([0 or 1])
 
-The [] indicate an optional parameter.
+Here, the [] indicate an optional parameter.
 
 Gets or sets the value which determines whether or not to report the items recognised by the parser.
 
-Also, C<report_tokens> is an option to new().
+Also, I<report_tokens> is an option to new().
 
 =head2 run()
 
@@ -1083,26 +1083,18 @@ Returns 0 for success and 1 for failure.
 
 =head2 verbose([0 .. 2])
 
-The [] indicate an optional parameter.
+Here, the [] indicate an optional parameter.
 
 Gets or sets the value which determines how many progress reports are printed.
 
-Also, C<verbose> is an option to new().
+Also, I<verbose> is an option to new().
 
 =head1 FAQ
 
-=head2 How do I reconcile Marpa's approach with classic lexing and parsing?
+=head2 What is the grammar parsed by this module?
 
-I've attempted to explain how they mesh in
-L<this article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html#Constructing_a_Mental_Picture_of_Lexing_and_Parsing>.
-
-=head2 Does this module handle utf8?
-
-Yes. See the last sample on L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
-
-=head2 In simple terms, what is the grammar you parse?
-
-It's a cut-down version of the L<DOT|http://www.graphviz.org/content/dot-language> language used by AT&T's C<dot> program. See L<http://graphviz.org>.
+It's a cut-down version of the L<Graph::Easy::Marpa> language.
+See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?>.
 
 Firstly, a summary:
 
@@ -1124,66 +1116,20 @@ Firstly, a summary:
 
 Note: Both edges and nodes can have attributes.
 
-See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for many samples.
+Note: HTML-like labels trigger special-case processing in Graphviz.
+See L</Why doesn't the parser handle my HTML-style labels?> below.
+
+Demo page:
+
+	L<http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>
+	L<Graph::Easy::Marpa|http://savage.net.au/Perl-modules/html/graph.easy.marpa/>
+
+The latter page utilizes the entire  L<Graph::Easy::Marpa> language.
+See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?>.
 
 And now the details:
 
 =over 4
-
-=item o Comments
-
-The first few lines of the input file can start with /^\s*#/, and will be discarded as comments.
-
-=item o Line-breaks
-
-These are converted into a single space.
-
-=item o Nodes
-
-Nodes are delimited by '[' and ']'.
-
-Within those, any printable character can be used for a node's name.
-
-Some literals - ']', '"', "'" - can be used in the node's value, but they must satisfy one of these
-conditions:
-
-=over 4
-
-=item o Escaped using '\'
-
-Eg: \].
-
-=item o Placed inside " ... "
-
-=item o Placed inside ' ... '
-
-=back
-
-Internal spaces are preserved within a node's name, but leading and trailing spaces are not (unless quoted).
-
-Lastly, the node's name can be empty. I.e.: You use '[]' in the input stream to create an anonymous node.
-
-Samples:
-
-	[]
-	[node.1]
-	[node 1]
-	[[node\]]
-	["[node]"]
-	[     From here     ] -> [     To there     ]
-
-Note: Node names quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
-
-=item o Edges
-
-Edge names are either '->' or '--'.
-
-No other edge names are accepted.
-
-Samples:
-
-	->
-	--
 
 =item o Attributes
 
@@ -1198,14 +1144,17 @@ Each attribute consists of a key:value pair, where ':' must appear literally.
 These key:value pairs must be separated by the ';' character. A trailing ';' is optional.
 
 The values for 'key' are reserved words used by Graphviz's L<attributes|http://graphviz.org/content/attrs>.
-These keys satisy the regexp /^[a-zA-Z_]+$/.
+These keys match the regexp /^[a-zA-Z_]+$/.
 
 For the 'value', any printable character can be used.
 
-Some escape sequences are reserved by L<Graphviz|http://www.graphviz.org/content/attrs>.
+Some escape sequences are a special meaning within L<Graphviz|http://www.graphviz.org/content/attrs>.
 
-Some literals - ';', '}', '<', '>', '"', "'" - can be used in the attribute's value, but they must satisfy one of these
-conditions:
+E.g. if you use [node name] {label: \N}, then if that graph is input to Graphviz's I<dot>, \N will be replaced
+by the name of the node.
+
+Some literals - ';', '}', '<', '>', '"', "'" - can be used in the attribute's value, but they must satisfy one
+of these conditions. They must be:
 
 =over 4
 
@@ -1240,6 +1189,53 @@ Note: That '\;' does not actually need those single-quote characters, since it i
 
 Note: Attribute values quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
 
+=item o Comments
+
+The first few lines of the input file can start with /^\s*#/, and will be discarded as comments.
+
+=item o Daisy-chains
+
+See L<Wikipedia|https://en.wikipedia.org/wiki/Daisy_chain> for the origin of this term.
+
+=over 4
+
+=item o Edges
+
+Edges can be daisy-chained by juxtaposition, or by using a comma (','), newline, space, or attributes ('{...}')
+to separate them.
+
+Hence both of these are valid: '->,->{color:green}' and '->{color:red}->{color:green}'.
+
+See data/edge.02.ge and data/edge.06.ge.
+
+=item o Groups
+
+Groups can be daisy chained by juxtaposition, or by using a newline or space to separate them.
+
+=item o Nodes
+
+Nodes can be daisy-chained by juxtaposition, or by using a comma (','), newline, space, or attributes ('{...}')
+to separate them.
+
+Hence all of these are valid: '[node.1][node.2]' and '[node.1],[node.2]' and '[node.1]{color:red}[node.2]'.
+
+=back
+
+=item o Edges
+
+Edge names are either '->' or '--'.
+
+No other edge names are accepted.
+
+Note: The syntax for edges is just a visual clue for the user. The I<directed> 'v' I<undirected> nature of the
+graph depends on the value of the 'directed' attribute present (explicitly or implicitly) in the input stream.
+Nevertheless, usage of '->' or '--' must match the nature of the graph, or Graphviz will issue a syntax error.
+
+Samples:
+
+	->
+	--
+
 =item o Graphs
 
 Graphs are sequences of nodes and edges, in any order.
@@ -1256,6 +1252,50 @@ A sample:
 =back
 
 For more samples, see the data/*.ge files shipped with the distro.
+
+=item o Line-breaks
+
+These are converted into a single space.
+
+=item o Nodes
+
+Nodes are delimited by '[' and ']'.
+
+Within those, any printable character can be used for a node's name.
+
+Some literals - ']', '"', "'" - can be used in the node's value, but they must satisfy one of these
+conditions. They must be:
+
+=over 4
+
+=item o Escaped using '\'
+
+Eg: \].
+
+=item o Placed inside " ... "
+
+=item o Placed inside ' ... '
+
+=back
+
+Internal spaces are preserved within a node's name, but leading and trailing spaces are not (unless quoted).
+
+Lastly, the node's name can be empty. I.e.: You use '[]' in the input stream to create an anonymous node.
+
+Samples:
+
+	[]
+	[node.1]
+	[node 1]
+	[[node\]]
+	["[node]"]
+	[     From here     ] -> [     To there     ]
+
+Note: Node names quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
+
+=head2 Does this module handle utf8?
+
+Yes. See the last sample on L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
 
 =head2 How is the parsed graph stored in RAM?
 
@@ -1295,6 +1335,8 @@ i.e. 2 sequential elements in the arrayref:
 		type  => 'attribute',
 		value => 'circle',
 	}
+
+Attribute hashrefs appear in the arrayref immediately after the item (edge or node) to which they belong.
 
 =item o Edges
 
@@ -1342,7 +1384,7 @@ Each anonymous node will have at least these 2 attributes:
 You can of course give your anonymous nodes any attributes, but they will be forced to have
 these attributes.
 
-E.g. If you give it a color, that would become element $n + 2 in the arrayref, and hence the color would override
+E.g. If you give it a color, that would become element $n + 2 in the arrayref, and hence that color would override
 the default color 'invis'. See the output for data/node.03.ge on
 L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
 
@@ -1350,9 +1392,61 @@ Node names are case-sensitive in C<dot>, but that does not matter within the con
 
 =back
 
+=head2 Why doesn't the parser handle my HTML-style labels?
+
+Traps for young players:
+
+=over 4
+
+=item o The <br /> component must include the '/'
+
+=item o If any tag's attributes use double-quotes, they will be doubled in the CSV output file
+
+That is, just like double-quotes everywhere else.
+
+=back
+
+See L<http://www.graphviz.org/content/dot-language> for details of Graphviz's HTML-like syntax.
+
+See data/table.*.ge for a set of examples.
+
+=head2 Why do I get error messages like the following?
+
+	Error: <stdin>:1: syntax error near line 1
+	context: digraph >>>  Graph <<<  {
+
+Graphviz reserves some words as keywords, meaning they can't be used as an ID, e.g. for the name of the graph.
+So, don't do this:
+
+	strict graph graph{...}
+	strict graph Graph{...}
+	strict graph strict{...}
+	etc...
+
+Likewise for non-strict graphs, and digraphs. You can however add double-quotes around such reserved words:
+
+	strict graph "graph"{...}
+
+Even better, use a more meaningful name for your graph...
+
+The keywords are: node, edge, graph, digraph, subgraph and strict. Compass points are not keywords.
+
+See L<keywords|http://www.graphviz.org/content/dot-language> in the discussion of the syntax of DOT
+for details.
+
 =head2 Where are the action subs named in the grammar?
 
 In L<MarpaX::Demo::StringParser::Actions>.
+
+=head2 What is the homepage of Marpa?
+
+L<http://jeffreykegler.github.io/Ocean-of-Awareness-blog/>.
+
+=head2 How do I reconcile Marpa's approach with classic lexing and parsing?
+
+I've included in a recent article a section called
+L<Constructing a Mental Picture of Lexing and Parsing|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html#Constructing_a_Mental_Picture_of_Lexing_and_Parsing>
+which is aimed at helping us think about this issue.
 
 =head2 How did you generate the html/*.svg files?
 
@@ -1380,7 +1474,7 @@ L<https://rt.cpan.org/Public/Dist/Display.html?Name=MarpaX::Demo::StringParser>.
 
 L<MarpaX::Demo::StringParser> was written by Ron Savage I<E<lt>ron@savage.net.auE<gt>> in 2013.
 
-Home page: L<http://savage.net.au/index.html>.
+Home page: L<http://savage.net.au/>.
 
 =head1 Copyright
 

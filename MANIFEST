@@ -17,6 +17,9 @@ data/edge.04.tokens
 data/edge.05.dot
 data/edge.05.ge
 data/edge.05.tokens
+data/edge.06.dot
+data/edge.06.ge
+data/edge.06.tokens
 data/graph.01.dot
 data/graph.01.ge
 data/graph.01.tokens
@@ -161,6 +164,7 @@ html/edge.02.svg
 html/edge.03.svg
 html/edge.04.svg
 html/edge.05.svg
+html/edge.06.svg
 html/graph.01.svg
 html/graph.02.svg
 html/graph.03.svg

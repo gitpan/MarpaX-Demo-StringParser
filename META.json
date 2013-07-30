@@ -59,23 +59,23 @@
    "provides" : {
       "MarpaX::Demo::StringParser" : {
          "file" : "lib/MarpaX/Demo/StringParser.pm",
-         "version" : "1.04"
+         "version" : "1.05"
       },
       "MarpaX::Demo::StringParser::Actions" : {
          "file" : "lib/MarpaX/Demo/StringParser/Actions.pm",
-         "version" : "1.04"
+         "version" : "1.05"
       },
       "MarpaX::Demo::StringParser::Config" : {
          "file" : "lib/MarpaX/Demo/StringParser/Config.pm",
-         "version" : "1.04"
+         "version" : "1.05"
       },
       "MarpaX::Demo::StringParser::Filer" : {
          "file" : "lib/MarpaX/Demo/StringParser/Filer.pm",
-         "version" : "1.04"
+         "version" : "1.05"
       },
       "MarpaX::Demo::StringParser::Utils" : {
          "file" : "lib/MarpaX/Demo/StringParser/Utils.pm",
-         "version" : "1.04"
+         "version" : "1.05"
       }
    },
    "release_status" : "stable",
@@ -84,5 +84,5 @@
          "http://www.perlfoundation.org/artistic_license_2_0"
       ]
    },
-   "version" : "1.04"
+   "version" : "1.05"
 }

@@ -66,9 +66,7 @@ Exit value: 0 for success, 1 for failure. Die upon error.
 
 Typical usage:
 
-	perl -Ilib scripts/parse.pl -d '[node]{color:blue}' -r 1 -v 1 -t output.tokens
-
-Complex graphs work too: -d '[node.1]{a:b;c:d}->{e:f;}->{g:h}[node.2]{i:j}->[node.3]{k:l}'
+	perl -Ilib scripts/parse.pl -d '[node]{color:blue; label: "Node name"}' -r 1 -v 1 -t output.tokens
 
 	perl -Ilib scripts/parse.pl -i data/node.04.ge -r 1 -t node.04.tokens
 	diffdata/node.04.tokens node.04.tokens
