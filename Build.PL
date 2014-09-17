@@ -27,12 +27,19 @@ $class -> new
 	dist_author    => 'Ron Savage <ron@savage.net.au>',
 	build_requires =>
 	{
-		Test::More=> 0.94,
-#		Test::Pod  => 1.45, # Make it optional. See t/pod.t
+		Test::More => 0.94,
+#		Test::Pod  => 1.45, # Make it optional. See xt/author/pod.t.
 	},
 	configure_requires =>
 	{
 		Module::Build => 0.3800,
+	},
+	meta_merge =>
+	{
+		resources =>
+		{
+			repository => 'https://github.com/dwimperl/MarpaX-Demo-StringParser',
+		},
 	},
 	requires =>
 	{
@@ -49,7 +56,7 @@ $class -> new
 		File::Temp       => 0.2301,
 		Getopt::Long     => 2.38,
 		HTML::Entities::Interpolate => 1.04,
-		Marpa::R2        => 2.064000,
+		Marpa::R2        => 2.082000,
 		Moo              => 1.002000,
 		open             => 0,
 		Path::Tiny       => 0.025,
@@ -63,5 +70,10 @@ $class -> new
 		Try::Tiny        => 0.09,
 		utf8             => 0,
 		warnings         => 0,
+	},
+	resources =>
+	{
+		bugtracker => 'https://rt.cpan.org/Public/Dist/Display.html?Name=MarpaX-Demo-StringParser',
+		license    => 'http://opensource.org/licenses/Artistic-2.0',
 	},
 ) -> create_build_script();

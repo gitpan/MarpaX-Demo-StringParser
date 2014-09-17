@@ -29,6 +29,8 @@ data/graph.02.tokens
 data/graph.03.dot
 data/graph.03.ge
 data/graph.03.tokens
+data/graph.04.ge
+data/graph.04.tokens
 data/node.01.dot
 data/node.01.ge
 data/node.01.tokens
@@ -215,6 +217,7 @@ lib/MarpaX/Demo/StringParser/Actions.pm
 lib/MarpaX/Demo/StringParser/Config.pm
 lib/MarpaX/Demo/StringParser/Filer.pm
 lib/MarpaX/Demo/StringParser/Utils.pm
+LICENSE
 Makefile.PL
 MANIFEST			This list of files
 META.json

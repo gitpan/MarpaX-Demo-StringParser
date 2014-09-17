@@ -1,5 +1,3 @@
-#!/usr/bin/env perl
-
 use strict;
 use warnings;
 
@@ -22,10 +20,10 @@ use Try::Tiny;
 
 # -----------
 
+my($count)         = 0;
 my($data_dir_name) = 'data';
 my($in_suffix)     = 'ge';
 my($out_suffix)    = 'tokens';
-my($test_count)    = 0;
 
 # The EXLOCK option is for BSD-based systems.
 
@@ -45,14 +43,11 @@ my($token_name);
 
 for my $ge_name (sort keys %ge_name)
 {
-	$test_count++;
+	$count++;
 
-	$new_name = File::Spec -> catfile($temp_dir_name, $ge_name);
-	$new_name .= '.tokens';
-	$old_name = File::Spec -> catfile($data_dir_name, $ge_name);
-	$old_name .= '.tokens';
-	$ge_name  = File::Spec -> catfile($data_dir_name, $ge_name);
-	$ge_name  .= '.ge';
+	$new_name = File::Spec -> catfile($temp_dir_name, "$ge_name.tokens");
+	$old_name = File::Spec -> catfile($data_dir_name, "$ge_name.tokens");
+	$ge_name  = File::Spec -> catfile($data_dir_name, "$ge_name.ge");
 
 	`$^X -Ilib $script -i $ge_name -t $new_name`;
 
@@ -69,4 +64,6 @@ for my $ge_name (sort keys %ge_name)
 	ok($diff_count == 0, "Compare shipped and generated: $old_name");
 }
 
-done_testing($test_count);
+print "# Internal test count: $count. \n";
+
+done_testing($count);

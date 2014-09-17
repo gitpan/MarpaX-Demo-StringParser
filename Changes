@@ -1,5 +1,27 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+1.08  Wed Sep 17 16:58:00 2014
+	- Update Build.PL and Makefile.PL re putting this package on github.
+	- Replace the deprecated 'action_object' parameter to Marpa::R2::Scanless::G with the 'semantics_package'
+		parameter to Marpa::R2::Scanless::R.
+
+1.07  Sat Feb 22 17:44:00 2014
+	- Add 'lexeme default = latm => 1' to the grammar.
+	- Make V 2.082 the minimum version for Marpa::R2.
+
+1.06  Tue Jan 14 15:58:00 2014
+	- Fix a typo in one of the samples in the docs:
+		Old: -> {label: Start} -> {color: red} [node.1] {color: green] -> [node.2]
+		New: -> {label: Start} -> {color: red} [node.1] {color: green} -> [node.2]
+	- Add data/graph.04.ge, which is just a combination of samples from the docs.
+	- Add installation instructions to the docs.
+	- Remove 'use open qw(:std :utf8)' and 'use charnames qw(:full :short)' from all modules.
+		'use open' is global (i.e. applies to /all/ modules), and I don't use any charnames.
+		It does mean you have to use 'use open qw(:std :utf8)' in any scripts calling this code,
+		if that's what you want to do.
+	- Switch from bareword file handles to lexically-named file handles. This stop these types of msgs:
+		Use of bareword filehandle in open at lib/MarpaX/Demo/StringParser.pm line 472.
+
 1.05  Mon Jul 29 14:42:00 2013
 	- Simplify the code in Actions.pm.
 	- Add Marpa's homepage to the FAQ.

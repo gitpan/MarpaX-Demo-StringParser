@@ -4,7 +4,7 @@
       "Ron Savage <ron@savage.net.au>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4005, CPAN::Meta::Converter version 2.131560",
+   "generated_by" : "Module::Build version 0.421",
    "license" : [
       "artistic_2"
    ],
@@ -38,7 +38,7 @@
             "File::Temp" : "0.2301",
             "Getopt::Long" : "2.38",
             "HTML::Entities::Interpolate" : "1.04",
-            "Marpa::R2" : "2.064",
+            "Marpa::R2" : "2.082",
             "Moo" : "1.002",
             "Path::Tiny" : "0.025",
             "Perl6::Slurp" : "0.03",
@@ -59,30 +59,33 @@
    "provides" : {
       "MarpaX::Demo::StringParser" : {
          "file" : "lib/MarpaX/Demo/StringParser.pm",
-         "version" : "1.05"
+         "version" : "1.08"
       },
       "MarpaX::Demo::StringParser::Actions" : {
          "file" : "lib/MarpaX/Demo/StringParser/Actions.pm",
-         "version" : "1.05"
+         "version" : "1.08"
       },
       "MarpaX::Demo::StringParser::Config" : {
          "file" : "lib/MarpaX/Demo/StringParser/Config.pm",
-         "version" : "1.05"
+         "version" : "1.08"
       },
       "MarpaX::Demo::StringParser::Filer" : {
          "file" : "lib/MarpaX/Demo/StringParser/Filer.pm",
-         "version" : "1.05"
+         "version" : "1.08"
       },
       "MarpaX::Demo::StringParser::Utils" : {
          "file" : "lib/MarpaX/Demo/StringParser/Utils.pm",
-         "version" : "1.05"
+         "version" : "1.08"
       }
    },
    "release_status" : "stable",
    "resources" : {
       "license" : [
-         "http://www.perlfoundation.org/artistic_license_2_0"
-      ]
+         "http://opensource.org/licenses/artistic-license-2.0.php"
+      ],
+      "repository" : {
+         "url" : "https://github.com/dwimperl/MarpaX-Demo-StringParser"
+      }
    },
-   "version" : "1.05"
+   "version" : "1.08"
 }

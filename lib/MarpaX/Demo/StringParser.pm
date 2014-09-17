@@ -3,9 +3,7 @@ package MarpaX::Demo::StringParser;
 use strict;
 use utf8;
 use warnings;
-use warnings  qw(FATAL utf8);    # Fatalize encoding glitches.
-use open      qw(:std :utf8);    # Undeclared streams in UTF-8.
-use charnames qw(:full :short);  # Unneeded in v5.16.
+use warnings qw(FATAL utf8); # Fatalize encoding glitches.
 
 # The next line is mandatory, else
 # the action names cannot be resolved.
@@ -94,7 +92,7 @@ has verbose =>
 	required => 0,
 );
 
-our $VERSION = '1.05';
+our $VERSION = '1.08';
 
 # ------------------------------------------------
 
@@ -267,10 +265,11 @@ sub BUILD
 	(
 		Marpa::R2::Scanless::G -> new
 		({
-action_object			=> 'MarpaX::Demo::StringParser::Actions',
 source					=> \(<<'END_OF_SOURCE'),
 
 :default				::= action => [values]
+
+lexeme default			= latm => 1
 
 # Overall stuff.
 
@@ -342,7 +341,8 @@ END_OF_SOURCE
 	(
 		Marpa::R2::Scanless::R -> new
 		({
-			grammar => $self -> grammar
+			grammar           => $self -> grammar,
+			semantics_package => 'MarpaX::Demo::StringParser::Actions',
 		})
 	);
 
@@ -469,20 +469,20 @@ sub generate_token_file
 		binary       => 1,
 	});
 
-	open(OUT, '>', $file_name) || die "Can't open(> $file_name): $!";
+	open(my $fh, '>', $file_name) || die "Can't open(> $file_name): $!";
 
 	# Don't call binmode here, because we're already using it.
 
-	$csv -> print(\*OUT, ['key', 'name', 'value']);
-	print OUT "\n";
+	$csv -> print(\*$fh, ['key', 'name', 'value']);
+	print $fh "\n";
 
 	for my $item ($self -> items -> print)
 	{
-		$csv -> print(\*OUT, [$$item{type}, $$item{name}, $$item{value}]);
-		print OUT "\n";
+		$csv -> print(\*$fh, [$$item{type}, $$item{name}, $$item{value}]);
+		print $fh "\n";
 	}
 
-	close OUT;
+	close $fh;
 
 } # End of generate_token_file.
 
@@ -504,9 +504,9 @@ sub get_graph_from_file
 
 	# This code accepts utf8 data, due to the standard preamble above.
 
-	open(INX, $self -> input_file) || die "Can't open input file(" . $self -> input_file . "): $!\n";
-	my(@line) = <INX>;
-	close INX;
+	open(my $fh, $self -> input_file) || die "Can't open input file(" . $self -> input_file . "): $!\n";
+	my(@line) = <$fh>;
+	close $fh;
 	chomp @line;
 
 	shift(@line) while ( ($#line >= 0) && ($line[0] =~ /^\s*#/) );
@@ -1246,10 +1246,8 @@ A sample:
 
 	[node]
 	[node] ->
-	-> {label: Start} -> {color: red} [node.1] {color: green] -> [node.2]
+	-> {label: Start} -> {color: red} [node.1] {color: green} -> [node.2]
 	[node.1] [node.2] [node.3]
-
-=back
 
 For more samples, see the data/*.ge files shipped with the distro.
 
@@ -1292,6 +1290,8 @@ Samples:
 	[     From here     ] -> [     To there     ]
 
 Note: Node names quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
+
+=back
 
 =head2 Does this module handle utf8?
 
@@ -1463,6 +1463,10 @@ The file Changes was converted into Changelog.ini by L<Module::Metadata::Changes
 =head1 Version Numbers
 
 Version numbers < 1.00 represent development versions. From 1.00 up, they are production versions.
+
+=head1 Repository
+
+L<https://github.com/ronsavage/MarpaX-Demo-StringParser>
 
 =head1 Support
 

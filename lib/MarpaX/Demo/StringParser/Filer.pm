@@ -3,15 +3,13 @@ package MarpaX::Demo::StringParser::Filer;
 use strict;
 use utf8;
 use warnings;
-use warnings  qw(FATAL utf8);    # Fatalize encoding glitches.
-use open      qw(:std :utf8);    # Undeclared streams in UTF-8.
-use charnames qw(:full :short);  # Unneeded in v5.16.
+use warnings qw(FATAL utf8); # Fatalize encoding glitches.
 
 use File::Basename; # For basename().
 
 use Moo;
 
-our $VERSION = '1.05';
+our $VERSION = '1.08';
 
 # ------------------------------------------------
 
