@@ -38,7 +38,7 @@ $class -> new
 	{
 		resources =>
 		{
-			repository => 'https://github.com/dwimperl/MarpaX-Demo-StringParser',
+			repository => 'https://github.com/ronsavage/MarpaX-Demo-StringParser',
 		},
 	},
 	requires =>

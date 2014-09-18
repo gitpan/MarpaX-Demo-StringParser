@@ -16,19 +16,19 @@ name: MarpaX-Demo-StringParser
 provides:
   MarpaX::Demo::StringParser:
     file: lib/MarpaX/Demo/StringParser.pm
-    version: '1.08'
+    version: '1.09'
   MarpaX::Demo::StringParser::Actions:
     file: lib/MarpaX/Demo/StringParser/Actions.pm
-    version: '1.08'
+    version: '1.09'
   MarpaX::Demo::StringParser::Config:
     file: lib/MarpaX/Demo/StringParser/Config.pm
-    version: '1.08'
+    version: '1.09'
   MarpaX::Demo::StringParser::Filer:
     file: lib/MarpaX/Demo/StringParser/Filer.pm
-    version: '1.08'
+    version: '1.09'
   MarpaX::Demo::StringParser::Utils:
     file: lib/MarpaX/Demo/StringParser/Utils.pm
-    version: '1.08'
+    version: '1.09'
 requires:
   Algorithm::Diff: '1.1902'
   Capture::Tiny: '0.11'
@@ -59,5 +59,5 @@ requires:
   warnings: '0'
 resources:
   license: http://opensource.org/licenses/artistic-license-2.0.php
-  repository: https://github.com/dwimperl/MarpaX-Demo-StringParser
-version: '1.08'
+  repository: https://github.com/ronsavage/MarpaX-Demo-StringParser
+version: '1.09'

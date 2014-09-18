@@ -9,7 +9,7 @@ use File::Basename; # For basename().
 
 use Moo;
 
-our $VERSION = '1.08';
+our $VERSION = '1.09';
 
 # ------------------------------------------------
 
