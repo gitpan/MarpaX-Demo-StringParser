@@ -1,7 +1,0 @@
-"key","name","value"
-"edge","->",""
-"attribute","color","cornflowerblue"
-"attribute","label","Top row\nBottom row"
-"edge","--",""
-"attribute","color","red"
-"attribute","label","Edges use cornflowerblue and red"

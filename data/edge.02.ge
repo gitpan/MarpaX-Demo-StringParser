@@ -1,3 +1,0 @@
-# Juxtaposed edges (without comma) with attributes. OK.
--> {color: cornflowerblue; label: Top row\nBottom row}
--- {color:red; label: Edges use cornflowerblue and red}

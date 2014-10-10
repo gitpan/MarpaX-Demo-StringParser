@@ -1,7 +1,11 @@
 #!/bin/bash
 
-perl -Ilib scripts/ge2tokens.pl
-perl -Ilib ~/bin/ge2svg.pl
+rm html/*
+rm $DR/Perl-modules/html/marpax.demo.stringparser/*
+rm ~/savage.net.au/Perl-modules/html/marpax.demo.stringparser/*
+
+perl -Ilib scripts/dash2svg.pl
 perl -Ilib scripts/generate.index.pl
 
-cp html/*.svg html/*.html $DR/Perl-modules/html/marpax.demo.stringparser
+cp html/* $DR/Perl-modules/html/marpax.demo.stringparser
+cp html/* ~/savage.net.au/Perl-modules/html/marpax.demo.stringparser

@@ -1,5 +1,24 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+2.00  Thu Oct  9 17:39:00 2014
+	- Re-write the grammar for DASH (a wrapper around Graphviz's DOT), and also re-write the
+		non-Marpa parsers for the strings with internal spaces.
+	- Move the renderer from Graph::Easy::Marpa::Renderer::GraphViz2 into this module, and call it
+		MarpaX::Demo::StringParser::Renderer.
+	- Remove MarpaX::Demo::StringParser::Actions, since this new grammar relies exclusively on
+		Marpa's event handling.
+	- Delete Graph::Easy::Marpa from CPAN.
+	- Re-write the docs, including a long explanation of the DASH language.
+	- Change some of the examples.
+	- Update the scripts, and add scripts/render.*.
+
+1.10  Fri Sep 19 16:38:00 2014
+	- Clean up bareword file handles.
+	- Re-generate the demo files.
+	- Rename data/*.dot to data/*.gv, to match other Graphviz-oriented modules.
+		This required patching my own ge2svg.pl, which is not shipped with any package.
+	- Switch from Perl6::Slurp to File::Slurp, to reduce the # of external module I use in all my modules.
+
 1.09  Fri Sep 19 09:15:00 2014
 	- Fix typo in repo in Build.PL.
 

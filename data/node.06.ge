@@ -1,2 +1,0 @@
-# Named node with attributes, with spaces. OK.
-[  node.1 ]       { label :                   A     Z                 }

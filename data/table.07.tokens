@@ -1,5 +1,0 @@
-"key","name","value"
-"node","node.1",""
-"attribute","color","pink"
-"attribute","label","<<table border='1'><tr><td>HTML-style entities: &amp;, &lt;, &gt; and &quot; in label</td></tr></table>>"
-"attribute","shape","rectangle"

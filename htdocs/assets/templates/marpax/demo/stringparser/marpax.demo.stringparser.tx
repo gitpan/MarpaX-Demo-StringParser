@@ -17,7 +17,7 @@
 
 	<p>More-or-less all the coding effort has gone into the problem of handling the various quoting rules (below).</p>
 
-	<p>I'm currently (2013-07-19) using <a href="http://metacpan.org/release/Marpa-R2">Marpa::R2</a> V 2.064000.</p>
+	<p>I'm currently (<: $date :>) using <a href="http://metacpan.org/release/Marpa-R2">Marpa::R2</a> V <: $marpa_version :>.</p>
 
 <hr />
 

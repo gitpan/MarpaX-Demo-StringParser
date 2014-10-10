@@ -23,12 +23,10 @@ if ($option_parser -> getoptions
 (
 	\%option,
 	'description=s',
-	'format=s',
 	'help',
 	'input_file=s',
-	'report_tokens=i',
-	'token_file=s',
-	'verbose=i',
+	'maxlevel=s',
+	'minlevel=s',
 ) )
 {
 	pod2usage(1) if ($option{'help'});
@@ -52,34 +50,35 @@ parse.pl - Run MarpaX::Demo::StringParser::Parser.
 
 =head1 SYNOPSIS
 
+This program calls MarpaX::Demo::StringParser to parse the DASH file (-description or
+-input_file), and optionally displays the parsed tokens as a tree.
+
+Note: Nothing is printed by default. Hence the use of '-max info' below.
+
 parse.pl [options]
 
 	Options:
-	-description graphDescription
+	-description DASHText
 	-help
-	-input_file aGEFileName
-	-report_tokens 0 or 1
-	-token_file aTokenFileName
-	-verbose Integer
+	-input_file aDASHFileName
+	-maxlevel logOption1
+	-minlevel logOption2
 
 Exit value: 0 for success, 1 for failure. Die upon error.
 
 Typical usage:
 
-	perl -Ilib scripts/parse.pl -d '[node]{color:blue; label: "Node name"}' -r 1 -v 1 -t output.tokens
+	perl -Ilib scripts/parse.pl -de '[node]{color:blue; label: "Node name"}' -max info
 
-	perl -Ilib scripts/parse.pl -i data/node.04.ge -r 1 -t node.04.tokens
-	diffdata/node.04.tokens node.04.tokens
+You can use scripts/parse.sh to simplify this process, but it assumes you're input file is in data/:
 
-You can use scripts/parse.sh to simplify this process:
-
-	scripts/parse.sh data/node.04.ge node.04.tokens
+	scripts/parse.sh node.04 -max info
 
 =head1 OPTIONS
 
 =over 4
 
-=item o -description graphDescription
+=item o -description DASHText
 
 Specify a graph description string to parse.
 
@@ -95,7 +94,7 @@ Default: ''.
 
 Print help and exit.
 
-=item o -input_file aGEFileName
+=item o -input_file aDASHFileName
 
 Read the graph description string from a file.
 
@@ -103,35 +102,29 @@ See also the -description option to read the graph description from the command 
 
 The whole file is slurped in as 1 graph.
 
-The first lines of the file can start with /\s*#/, and will be discarded as comments.
+Lines of the file can start with m!^(?:#|//)!, and will be discarded as comments.
 
 The -description option takes precedence over the -input_file option.
 
 Default: ''.
 
-=item o -report_tokens 0 or 1
+=item o -maxlevel logOption1
 
-Report the tokens recognised by the parser.
+This option affects Log::Handler.
 
-This is a neat list of what is optionally written if a -token_file is specified.
+See the Log::handler docs.
 
-Default: 0.
+Default: 'notice'.
 
-=item o -token_file aTokenFileName
+=item o -minlevel logOption2
 
-The name of a CSV file of parsed tokens to write.
+This option affects Log::Handler.
 
-This is a permanent copy of what is reported if the -report_tokens option is set to 1.
+See the Log::handler docs.
 
-If '', no output file will be written.
+Default: 'error'.
 
-Default: ''.
-
-=item o -verbose Integer
-
-Print more (1, 2) or less (0) progress messages.
-
-Default: 0.
+No lower levels are used.
 
 =back
 

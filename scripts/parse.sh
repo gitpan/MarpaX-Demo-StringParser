@@ -1,11 +1,7 @@
 #!/bin/bash
 
-echo Contents of $1:
-cat $1
+echo Contents of data/$1.dash:
+cat data/$1.dash
 echo ----------------------------
-echo Output of parser:
-perl -Ilib scripts/parse.pl -i $1 -t $2 $3 $4 $5 $6 $7 $8
-echo ----------------------------
-echo Contents of $2:
-cat $2
+perl -Ilib scripts/parse.pl -i data/$1.dash $2 $3 $4 $5
 echo ----------------------------

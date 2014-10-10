@@ -9,6 +9,7 @@ use Config;
 
 use Date::Simple;
 
+use File::Slurp; # For read-file().
 use File::Spec;
 
 use MarpaX::Demo::StringParser::Config;
@@ -16,9 +17,9 @@ use MarpaX::Demo::StringParser::Filer;
 
 use HTML::Entities::Interpolate;
 
-use Moo;
+use Marpa::R2;
 
-use Perl6::Slurp; # For slurp().
+use Moo;
 
 use Text::CSV::Slurp;
 use Text::Xslate 'mark_raw';
@@ -32,13 +33,14 @@ has config =>
 );
 
 
-our $VERSION = '1.09';
+our $VERSION = '2.00';
 
 # ------------------------------------------------
 
 sub generate_demo_environment
 {
-	my($self) = @_;
+	my($self)   = @_; # Chomp only works in list context (or with array_ref).
+	my($debian) = read_file('/etc/debian_version', chomp => 1);
 
 	my(@environment);
 
@@ -47,7 +49,7 @@ sub generate_demo_environment
 	push @environment,
 	{left => 'Author', right => mark_raw(qq|<a href="http://savage.net.au/">Ron Savage</a>|)},
 	{left => 'Date',   right => Date::Simple -> today},
-	{left => 'OS',     right => 'Debian V 6'},
+	{left => 'OS',     right => "Debian V $debian"},
 	{left => 'Perl',   right => $Config{version} };
 
 	return \@environment;
@@ -61,7 +63,7 @@ sub generate_demo_index
 	my($self)          = @_;
 	my($data_dir_name) = 'data';
 	my($html_dir_name) = 'html';
-	my(%data_file)     = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, 'ge');
+	my(%data_file)     = MarpaX::Demo::StringParser::Filer -> new -> get_files($data_dir_name, 'dash');
 
 	my($html_name);
 	my($line, @line);
@@ -69,14 +71,14 @@ sub generate_demo_index
 
 	for my $key (sort keys %data_file)
 	{
-		$name      = "$data_dir_name/$key.ge";
-		$line      = slurp $name, {utf8 => 1};
+		$name      = "$data_dir_name/$key.dash";
+		$line      = read_file($name, binmode => ':encoding(utf-8)');
 		@line      = split(/\n/, $line);
 		$html_name = "$html_dir_name/$key.svg";
 
 		$data_file{$key} =
 		{
-			ge     => join('<br />', map{$Entitize{$_} || ''} @line),
+			dash   => join('<br />', map{$Entitize{$_} || ''} @line),
 			input  => $name,
 			output => -e $html_name ? $html_name : 'None',
 			title  => $line[0],
@@ -102,7 +104,7 @@ sub generate_demo_index
 			{
 				{
 					count  => ++$count,
-					ge     => mark_raw($data_file{$_}{ge}),
+					dash   => mark_raw($data_file{$_}{dash}),
 					image  => "./$_.svg",
 					input  => mark_raw($data_file{$_}{input}),
 					output => mark_raw($data_file{$_}{output}),
@@ -110,16 +112,18 @@ sub generate_demo_index
 				};
 			} @key
 			],
+		date            => Date::Simple -> today,
 		environment     => $self -> generate_demo_environment,
 		fancy_table_css => "$$config{css_url}/fancy.table.css",
+		marpa_version   => $Marpa::R2::VERSION,
 		version         => $VERSION,
 	}
 	);
 	my($file_name) = File::Spec -> catfile($html_dir_name, 'index.html');
 
-	open(OUT, '>', $file_name);
-	print OUT $index;
-	close OUT;
+	open(my $fh, '>', $file_name);
+	print $fh $index;
+	close $fh;
 
 	print "Wrote $file_name\n";
 

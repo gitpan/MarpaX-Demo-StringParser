@@ -26,7 +26,6 @@
       },
       "runtime" : {
          "requires" : {
-            "Algorithm::Diff" : "1.1902",
             "Capture::Tiny" : "0.11",
             "Config" : "0",
             "Config::Tiny" : "2.14",
@@ -34,20 +33,23 @@
             "File::Basename" : "2.78",
             "File::Copy" : "2.21",
             "File::HomeDir" : "0.99",
+            "File::Slurp" : "9999.19",
             "File::Spec" : "3.33",
-            "File::Temp" : "0.2301",
             "Getopt::Long" : "2.38",
+            "GraphViz2" : "2.33",
             "HTML::Entities::Interpolate" : "1.04",
-            "Marpa::R2" : "2.082",
+            "Log::Handler" : "0.82",
+            "Marpa::R2" : "2.096",
             "Moo" : "1.002",
             "Path::Tiny" : "0.025",
-            "Perl6::Slurp" : "0.03",
             "Pod::Usage" : "1.36",
             "Set::Array" : "0.23",
             "Text::CSV" : "1.32",
             "Text::CSV::Slurp" : "1.01",
             "Text::Xslate" : "1.4001",
+            "Tree::DAG_Node" : "1.22",
             "Try::Tiny" : "0.09",
+            "Types::Standard" : "1.000004",
             "charnames" : "0",
             "open" : "0",
             "strict" : "0",
@@ -59,23 +61,23 @@
    "provides" : {
       "MarpaX::Demo::StringParser" : {
          "file" : "lib/MarpaX/Demo/StringParser.pm",
-         "version" : "1.09"
-      },
-      "MarpaX::Demo::StringParser::Actions" : {
-         "file" : "lib/MarpaX/Demo/StringParser/Actions.pm",
-         "version" : "1.09"
+         "version" : "2.00"
       },
       "MarpaX::Demo::StringParser::Config" : {
          "file" : "lib/MarpaX/Demo/StringParser/Config.pm",
-         "version" : "1.09"
+         "version" : "2.00"
       },
       "MarpaX::Demo::StringParser::Filer" : {
          "file" : "lib/MarpaX/Demo/StringParser/Filer.pm",
-         "version" : "1.09"
+         "version" : "2.00"
+      },
+      "MarpaX::Demo::StringParser::Renderer" : {
+         "file" : "lib/MarpaX/Demo/StringParser/Renderer.pm",
+         "version" : "2.00"
       },
       "MarpaX::Demo::StringParser::Utils" : {
          "file" : "lib/MarpaX/Demo/StringParser/Utils.pm",
-         "version" : "1.09"
+         "version" : "2.00"
       }
    },
    "release_status" : "stable",
@@ -87,5 +89,5 @@
          "url" : "https://github.com/ronsavage/MarpaX-Demo-StringParser"
       }
    },
-   "version" : "1.09"
+   "version" : "2.00"
 }

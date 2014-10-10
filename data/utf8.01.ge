@@ -1,5 +1,0 @@
-# Graph with utf8 attributes. OK.
-[From]{color: green; label: Reichwaldstraße}
--> {color:maroon; label: Πηληϊάδεω Ἀχιλῆος}
-[To]{color: blue; label: Δ Lady}
-

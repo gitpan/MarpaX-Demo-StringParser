@@ -5,10 +5,9 @@ use utf8;
 use warnings;
 use warnings qw(FATAL utf8); # Fatalize encoding glitches.
 
-# The next line is mandatory, else
-# the action names cannot be resolved.
+use File::Slurp; # For read_file().
 
-use MarpaX::Demo::StringParser::Actions;
+use Log::Handler;
 
 use Marpa::R2;
 
@@ -18,13 +17,17 @@ use Set::Array;
 
 use Text::CSV;
 
+use Tree::DAG_Node;
+
+use Types::Standard qw/Any ArrayRef Int Str/;
+
 use Try::Tiny;
 
 has description =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Str',
+	isa      => Str,
 	required => 0,
 );
 
@@ -32,7 +35,7 @@ has grammar =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Marpa::R2::Scanless::G',
+	isa      => Any, # 'Marpa::R2::Scanless::G',
 	required => 0,
 );
 
@@ -40,7 +43,7 @@ has graph_text =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Str',
+	isa      => Str,
 	required => 0,
 );
 
@@ -48,15 +51,31 @@ has input_file =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Str',
+	isa      => Str,
 	required => 0,
 );
 
-has items =>
+has logger =>
 (
-	default  => sub{return ''},
+	default  => sub{return undef},
 	is       => 'rw',
-#	isa      => 'Set::Array',
+	isa      => Any,
+	required => 0,
+);
+
+has maxlevel =>
+(
+	default  => sub{return 'notice'},
+	is       => 'rw',
+	isa      => Str,
+	required => 0,
+);
+
+has minlevel =>
+(
+	default  => sub{return 'error'},
+	is       => 'rw',
+	isa      => Str,
 	required => 0,
 );
 
@@ -64,218 +83,72 @@ has recce =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Marpa::R2::Scanless::R',
+	isa      => Any, # 'Marpa::R2::Scanless::R',
 	required => 0,
 );
 
-has report_tokens =>
+has stack =>
 (
-	default  => sub{return 0},
+	default  => sub{return []},
 	is       => 'rw',
-#	isa      => 'Int',
+	isa      => ArrayRef,
 	required => 0,
 );
 
-has token_file =>
+has tree =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-#	isa      => 'Str',
+	isa      => Any,
 	required => 0,
 );
 
-has verbose =>
+has uid =>
 (
 	default  => sub{return 0},
 	is       => 'rw',
-#	isa      => 'Int',
+	isa      => Int,
 	required => 0,
 );
 
-our $VERSION = '1.09';
-
-# ------------------------------------------------
-
-sub attribute_list
-{
-	my($self, $attribute_list) = @_;
-	my(@char)          = split(//, $attribute_list);
-	my($inside_name)   = 1;
-	my($inside_value)  = 0;
-	my($quote)         = '';
-	my($name)          = '';
-	my($previous_char) = '';
-
-	my($char);
-	my(%attribute);
-	my($key);
-	my($value);
-
-	for my $i (0 .. $#char)
-	{
-		$char = $char[$i];
-
-		# Name matches /^[a-zA-Z_]+$/.
-
-		if ($inside_name)
-		{
-			next if ($char =~ /\s/);
-
-			if ($char eq ':')
-			{
-				print "Attribute name: $name\n" if ($self -> verbose > 1);
-
-				$inside_name = 0;
-				$key         = $name;
-				$name        = '';
-			}
-			elsif ($char =~ /[a-zA-Z_]/)
-			{
-				$name .= $char;
-			}
-			else
-			{
-				die "The char '$char' is not allowed in the names of attributes\n";
-			}
-		}
-		elsif ($inside_value)
-		{
-			if ($char eq $quote)
-			{
-				# Get out of quotes if matching one found.
-				# But, ignore an escaped quote.
-				# The first 2 backslashes are just to fix syntax highlighting in UltraEdit.
-
-				if ($char =~ /[\"\']/)
-				{
-					if ($previous_char ne '\\')
-					{
-						$quote = '';
-					}
-				}
-				else
-				{
-					if ( (substr($value, 0, 2) eq '<<') && ($i > 0) && ($char[$i - 1]) eq '>')
-					{
-						$quote = '';
-					}
-					elsif ( (substr($value, 0, 1) eq '<') && (substr($value, 1, 1) ne '<') && ($previous_char ne '\\') )
-					{
-						$quote = '';
-					}
-				}
-
-				$value .= $char;
-			}
-			elsif ( ($char eq ';') && ($quote eq '') )
-			{
-				if ($previous_char eq '\\')
-				{
-					$value .= $char;
-				}
-				else
-				{
-					$attribute{$key} = $value;
-
-					print "Attribute value: $value\n" if ($self -> verbose > 1);
-
-					$inside_name  = 1;
-					$inside_value = 0;
-					$quote        = '';
-					$key          = '';
-					$value        = '';
-				}
-			}
-			else
-			{
-				$value .= $char;
-			}
-		}
-		else # After name and ':' but before label.
-		{
-			next if ($char =~ /\s/);
-
-			$inside_value = 1;
-			$value        = $char;
-
-			# Look out for quotes, amd make '<' match '>'.
-			# The backslashes are just to fix syntax highlighting in UltraEdit.
-			# Also, this being the 1st char in the value, there can't be a '\' before it.
-
-			if ($char =~ /[\"\'<]/)
-			{
-				$quote = $char eq '<' ? '>' : $char;
-			}
-		}
-
-		$previous_char = $char;
-	}
-
-	# Beware {a:b;}. In this case, the ';' leaves $key eq ''.
-
-	if (length $key)
-	{
-		$attribute{$key} = $value;
-
-		print "Attribute value: $value\n" if ($self -> verbose > 1);
-	}
-
-	for $key(sort keys %attribute)
-	{
-		$value = $attribute{$key};
-		$value =~ s/\s+$//;
-
-		# The first 2 backslashes are just to fix syntax highlighting in UltraEdit.
-
-		$value =~ s/^([\"\'])(.*)\1$/$2/;
-
-		print "Attribute: $key => $value\n" if ($self -> verbose);
-
-		$self -> items -> push
-		({
-			name  => $key,
-			type  => 'attribute',
-			value => $value,
-		});
-	}
-
-} # End of attribute_list.
+our $VERSION = '2.00';
 
 # --------------------------------------------------
-# References from an email from Jeffrey to the Marpa Google Groups list:
-# Check out the SLIF grammar:
-# <https://github.com/jeffreykegler/Marpa--R2/blob/master/cpan/lib/Marpa/R2/meta/metag.bnf>.
-# It's full of stuff you can steal, including rules for quoted strings.
-# The basic idea is that strings must be G0 lexemes, not assembled in G1 as your (Paul Bennett) gist has it.
-# Jean-Damien's C language BNF:
-# <https://github.com/jddurand/MarpaX-Languages-C-AST/blob/master/lib/MarpaX/Languages/C/AST/Grammar/ISO_ANSI_C_2011.pm>
-# is also full of stuff to do all the C syntax, including strings and C-style comments. -- jeffrey
+# For accepted and rejected by Marpa, see
+# Marpa-R2-2.094000/lib/Marpa/R2/meta/metag.bnf.
 
 sub BUILD
 {
 	my($self) = @_;
 
-	$self -> items(Set::Array -> new);
+	if (! defined $self -> logger)
+	{
+		$self -> logger(Log::Handler -> new);
+		$self -> logger -> add
+		(
+			screen =>
+			{
+				alias          => 'logger',
+				maxlevel       => $self -> maxlevel,
+				message_layout => '%m',
+				minlevel       => $self -> minlevel,
+			}
+		);
+	}
 
-	# Ensure we can report from the action_object.
-
-	$MarpaX::Demo::StringParser::Actions::verbose = $self -> verbose;
+	# Policy: Event names are always the same as the name of the corresponding lexeme.
 
 	$self -> grammar
 	(
 		Marpa::R2::Scanless::G -> new
 		({
-source					=> \(<<'END_OF_SOURCE'),
+source					=> \(<<'END_OF_GRAMMAR'),
 
 :default				::= action => [values]
 
-lexeme default			= latm => 1
+lexeme default			=  latm => 1		# Longest Acceptable Token Match.
 
-# Overall stuff.
-
-:start 					::= graph_grammar
-
-graph_grammar			::= graph_definition	action => graph
+graph_grammar			::= graph_definition
 
 # Graph stuff.
 
@@ -286,17 +159,12 @@ graph_definition		::= node_definition
 node_definition			::= node_statement
 							| node_statement graph_definition
 
-node_statement			::= node_name
-							| node_name attribute_definition
+node_statement			::= node_name_token
+							| node_name_token attribute_definition
 							| node_statement (',') node_statement
 
-node_name				::= start_node end_node
-
-:lexeme					~ start_node		pause => before		event => start_node
-start_node				~ '['
-
-:lexeme					~ end_node
-end_node				~ ']'
+node_name_token			::= start_node end_node		# Allow for the anonymous node.
+							| start_node node_name end_node
 
 # Edge stuff
 
@@ -310,30 +178,67 @@ edge_statement			::= edge_name
 edge_name				::= directed_edge
 							| undirected_edge
 
-:lexeme					~ directed_edge		pause => before		event => directed_edge
-directed_edge			~ '->'
-
-:lexeme					~ undirected_edge	pause => before		event => undirected_edge
-undirected_edge			~ '--'
-
 # Attribute stuff.
 
-attribute_definition	::= attribute_statement*
+attribute_definition	::= attribute_statement+
 
-attribute_statement		::= start_attributes end_attributes
+attribute_statement		::= start_attributes string_token_set end_attributes
 
-:lexeme					~ start_attributes	pause => before		event => start_attributes
+string_token_set		::= string_token_pair+
+
+string_token_pair		::= literal_label
+							| attribute_name (':') attribute_value
+
+# Lexemes in alphabetical order.
+
+:lexeme					~ attribute_name			pause => before		event => attribute_name
+
+attribute_name			~ string_char_set+
+
+:lexeme					~ attribute_value			pause => before		event => attribute_value
+
+attribute_value			~ string_char_set+
+
+:lexeme					~ directed_edge				pause => before		event => directed_edge		priority => 2
+directed_edge			~ '->'
+
+:lexeme					~ end_attributes			pause => before		event => end_attributes		priority => 1
+end_attributes			~ '}'
+
+:lexeme					~ end_node					pause => before		event => end_node			priority => 1
+end_node				~ ']'
+
+escaped_char			~ '\' [[:print:]]
+
+# Use ' here just for the UltraEdit syntax hiliter.
+
+:lexeme					~ literal_label				pause => before		event => literal_label		priority => 1
+literal_label			~ 'label'
+
+:lexeme					~ node_name					pause => before		event => node_name
+
+node_name				~ string_char_set+
+
+:lexeme					~ start_attributes			pause => before		event => start_attributes
 start_attributes		~ '{'
 
-:lexeme					~ end_attributes
-end_attributes			~ '}'
+:lexeme					~ start_node				pause => before		event => start_node
+start_node				~ '['
+
+string_char_set			~ escaped_char
+							| [^;:}\]] # Neither a separator [;:] nor a terminator [}\]].
+
+:lexeme					~ undirected_edge			pause => before		event => undirected_edge	priority => 2
+undirected_edge			~ '--'
+
+# Lexemes in alphabetical order.
 
 # Boilerplate.
 
 :discard				~ whitespace
 whitespace				~ [\s]+
 
-END_OF_SOURCE
+END_OF_GRAMMAR
 		})
 	);
 
@@ -341,229 +246,120 @@ END_OF_SOURCE
 	(
 		Marpa::R2::Scanless::R -> new
 		({
-			grammar           => $self -> grammar,
-			semantics_package => 'MarpaX::Demo::StringParser::Actions',
+			grammar => $self -> grammar,
 		})
 	);
+
+	# Since $self -> tree has not been initialized yet,
+	# we can't call our _add_daughter() until after this statement.
+
+	$self -> tree(Tree::DAG_Node -> new({name => 'root', attributes => {uid => 0} }));
+	$self -> stack([$self -> tree -> root]);
+
+	# This cut-down version of Graph::Easy::Marpa has no prolog (unlike Graph::Marpa).
+	# So, all tokens in the input are descended from the 'graph' node.
+
+	for my $name (qw/prolog graph/)
+	{
+		$self -> _add_daughter($name, {});
+	}
+
+	# The 'prolog' daughter is the parent of all items in the prolog, but is not used here.
+	# It is used in GraphViz2::Marpa;
+	# The 'graph' daughter gets pushed onto the stack because in this module's grammar,
+	# all items belong to the graph.
+
+	my(@daughters) = $self -> tree -> daughters;
+	my($index)     = 1; # 0 => prolog, 1 => graph.
+	my($stack)     = $self -> stack;
+
+	push @$stack, $daughters[1];
+
+	$self -> stack($stack);
 
 } # End of BUILD.
 
 # ------------------------------------------------
 
-sub edge
+sub _add_daughter
 {
-	my($self, $edge_name) = @_;
+	my($self, $name, $attributes)  = @_;
+	$$attributes{uid} = $self -> uid($self -> uid + 1);
+	my($node)         = Tree::DAG_Node -> new({name => $name, attributes => $attributes});
+	my($stack)        = $self -> stack;
 
-	print "Edge: $edge_name\n" if ($self -> verbose);
+	$$stack[$#$stack] -> add_daughter($node);
 
-	$self -> items -> push
-	({
-		name  => $edge_name,
-		type  => 'edge',
-		value => '',
-	});
-
-} # End of edge.
-
-# -----------------------------------------------
-# $target is either qr/]/ or qr/}/, and allows us to handle
-# both node names and either edge or node attributes.
-# The special case is <<...>>, as used in attributes.
-
-sub find_terminator
-{
-	my($self, $stringref, $target, $start) = @_;
-	my(@char)   = split(//, substr($$stringref, $start) );
-	my($offset) = 0;
-	my($quote)  = '';
-	my($angle)  = 0; # Set to 1 if inside <<...>>.
-
-	my($char);
-
-	for my $i (0 .. $#char)
-	{
-		$char   = $char[$i];
-		$offset = $i;
-
-		if ($quote)
-		{
-			# Ignore an escaped quote.
-			# The first 2 backslashes are just to fix syntax highlighting in UltraEdit.
-
-			next if ( ($char =~ /[\]\"\'>]/) && ($i > 0) && ($char[$i - 1] eq '\\') );
-
-			# Get out of quotes if matching one found.
-
-			if ($char eq $quote)
-			{
-				if ($quote eq '>')
-				{
-					$quote = '' if (! $angle || ($char[$i - 1] eq '>') );
-
-					next;
-				}
-
-				$quote = '';
-
-				next;
-			}
-		}
-		else
-		{
-			# Look for quotes.
-			# 1: Skip escaped chars.
-
-			next if ( ($i > 0) && ($char[$i - 1] eq '\\') );
-
-			# 2: " and '.
-			# The backslashes are just to fix syntax highlighting in UltraEdit.
-
-			if ($char =~ /[\"\']/)
-			{
-				$quote = $char;
-
-				next;
-			}
-
-			# 3: <.
-			# In the case of attributes ($target eq '}') but not nodes names,
-			# quotes can be <...> or <<...>>.
-
-			if ( ($target =~ '}') && ($char =~ '<') )
-			{
-				$quote = '>';
-				$angle = 1 if ( ($i < $#char) && ($char[$i + 1] eq '<') );
-
-				next;
-			}
-
-			last if ($char =~ $target);
-		}
-	}
-
-	return $start + $offset;
-
-} # End of find_terminator.
-
-# -----------------------------------------------
-
-sub format_token
-{
-	my($self, $item) = @_;
-	my($format) = '%4s  %-13s  %-s';
-	my($value)  = $$item{name};
-	$value      = "$value => $$item{value}" if (length($$item{value}) > 0);
-
-	return sprintf($format, $$item{count}, $$item{type}, $value);
-
-} # End of format_token.
+} # End of _add_daughter.
 
 # --------------------------------------------------
 
-sub generate_token_file
+sub clean_after
 {
-	my($self, $file_name) = @_;
-	my($csv) = Text::CSV -> new
-	({
-		always_quote => 1,
-		binary       => 1,
-	});
+	my($self, $s) = @_;
 
-	open(my $fh, '>', $file_name) || die "Can't open(> $file_name): $!";
+	$s =~ s/^\s+//;
+	$s =~ s/\s+$//;
+	$s =~ s/^([\"\'])(.*)\1$/$2/; # The backslashes are just for the UltraEdit syntax hiliter.
 
-	# Don't call binmode here, because we're already using it.
+	return $s;
 
-	$csv -> print(\*$fh, ['key', 'name', 'value']);
-	print $fh "\n";
-
-	for my $item ($self -> items -> print)
-	{
-		$csv -> print(\*$fh, [$$item{type}, $$item{name}, $$item{value}]);
-		print $fh "\n";
-	}
-
-	close $fh;
-
-} # End of generate_token_file.
+} # End of clean_after.
 
 # --------------------------------------------------
 
-sub get_graph_from_command_line
+sub clean_before
+{
+	my($self, $s) = @_;
+
+	$s =~ s/\s*;\s*$//;
+	$s =~ s/^\s+//;
+	$s =~ s/\s+$//;
+	$s =~ s/^(<)\s+/$1/;
+	$s =~ s/\s+(>)$/$1/;
+
+	return $s;
+
+} # End of clean_before.
+
+# --------------------------------------------------
+
+sub _get_graph_from_command_line
 {
 	my($self) = @_;
 
 	$self -> graph_text($self -> description);
 
-} # End of get_graph_from_command_line.
+} # End of _get_graph_from_command_line.
 
 # --------------------------------------------------
 
-sub get_graph_from_file
+sub log
 {
-	my($self) = @_;
+	my($self, $level, $s) = @_;
 
-	# This code accepts utf8 data, due to the standard preamble above.
+	$self -> logger -> log($level => $s) if ($self -> logger);
 
-	open(my $fh, $self -> input_file) || die "Can't open input file(" . $self -> input_file . "): $!\n";
-	my(@line) = <$fh>;
-	close $fh;
-	chomp @line;
-
-	shift(@line) while ( ($#line >= 0) && ($line[0] =~ /^\s*#/) );
-
-	$self -> graph_text(join(' ', @line) );
-
-} # End of get_graph_from_file.
-
-# ------------------------------------------------
-
-sub node
-{
-	my($self, $node_name) = @_;
-	$node_name =~ s/^\s+//;
-	$node_name =~ s/\s+$//;
-
-	# The first 2 backslashes are just to fix syntax highlighting in UltraEdit.
-
-	$node_name =~ s/^([\"\'])(.*)\1$/$2/;
-
-	print "Node: $node_name\n" if ($self -> verbose);
-
-	$self -> items -> push
-	({
-		name  => $node_name,
-		type  => 'node',
-		value => '',
-	});
-
-	if ($node_name eq '')
-	{
-		$self -> items -> push
-		({
-			name  => 'color',
-			type  => 'attribute',
-			value => 'invis',
-		});
-	}
-
-} # End of node.
+} # End of log.
 
 # --------------------------------------------------
 
-sub process
+sub _process
 {
-	my($self)   = @_;
-	my($string) = $self -> graph_text;
-	my($length) = length $string;
+	my($self)       = @_;
+	my($string)     = $self -> clean_before($self -> graph_text);
+	my($length)     = length $string;
+	my($last_event) = '';
+	my($format)     = '%-20s    %5s    %5s    %-s';
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
 
-	my($attribute_list);
-	my($do_lexeme_read);
-	my(@event, $event_name);
-	my($lexeme_name, $lexeme);
-	my($node_name);
+	my(@event, $event_count, $event_name, $edge);
+	my(@fields);
+	my($lexeme, $literal);
 	my($span, $start);
+
+	$self -> log(debug => sprintf($format, 'Event', 'Start', 'Span', 'Lexeme') );
 
 	for
 	(
@@ -572,113 +368,357 @@ sub process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
-		print "read() => pos: $pos\n" if ($self -> verbose > 1);
+		@event       = @{$self -> recce -> events};
+		$event_count = scalar @event;
 
-		$do_lexeme_read = 1;
-		@event          = @{$self -> recce -> events};
+		if ($event_count > 1)
+		{
+			$self -> log(error => "Event count: $event_count. Names: " . join(', ', map{${$_}[0]} @event) . '.');
+
+			die "The code only handles 1 event at a time\n";
+		}
+
 		$event_name     = ${$event[0]}[0];
 		($start, $span) = $self -> recce -> pause_span;
-		$lexeme_name    = $self -> recce -> pause_lexeme;
 		$lexeme         = $self -> recce -> literal($start, $span);
 
-		print "pause_span($lexeme_name) => start: $start. span: $span. " .
-			"lexeme: $lexeme. event: $event_name\n" if ($self -> verbose > 1);
+		$self -> log(debug => sprintf($format, $event_name, $start, $span, $lexeme) );
 
-		if ($event_name eq 'start_attributes')
+		if ($event_name eq 'attribute_name')
 		{
-			# Read the attribute_start lexeme, but don't do lexeme_read()
-			# at the bottom of the for loop, because we're just about
-			# to fiddle $pos to skip the attributes.
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
 
-			$pos            = $self -> recce -> lexeme_read($lexeme_name);
-			$pos            = $self -> find_terminator(\$string, qr/}/, $start);
-			$attribute_list = substr($string, $start + 1, $pos - $start - 1);
-			$do_lexeme_read = 0;
+			push @fields, $self -> clean_after($literal);
+		}
+		elsif ($event_name eq 'attribute_value')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = $self -> clean_after(substr($string, $start, $pos - $start) );
 
-			print "index() => attribute list: $attribute_list\n" if ($self -> verbose > 1);
+			$self -> _add_daughter($fields[0], {value => $literal});
 
-			$self -> attribute_list($attribute_list);
+			@fields = ();
+
+			# Skip the separator.
+
+			while ( ($pos < (length($string) - 1) ) && (substr($string, $pos, 1) =~ /[\s;]/) ) { $pos++ };
+		}
+		elsif ($event_name eq 'end_attributes')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
+
+			$self -> _process_brace($literal);
+		}
+		elsif ($event_name eq 'end_node')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
+
+			# Is this the anonymous node?
+
+			if ($last_event eq 'start_node')
+			{
+				$self -> _add_daughter('node_id', {value => ''});
+			}
+		}
+		elsif ($event_name eq 'literal_label')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
+
+			push @fields, $literal;
+
+			$pos    = $self -> _process_label($self -> recce, \@fields, $string, $length, $pos);
+			@fields = ();
+		}
+		elsif ($event_name eq 'node_name')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = $self -> clean_after(substr($string, $start, $pos - $start) );
+
+			$self -> _add_daughter('node_id', {value => $literal});
+		}
+		elsif ($event_name eq 'start_attributes')
+		{
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
+
+			$self -> _process_brace($literal);
 		}
 		elsif ($event_name eq 'start_node')
 		{
-			# Read the node_start lexeme, but don't do lexeme_read()
-			# at the bottom of the for loop, because we're just about
-			# to fiddle $pos to skip the node's name.
-
-			$pos            = $self -> recce -> lexeme_read($lexeme_name);
-			$pos            = $self -> find_terminator(\$string, qr/]/, $start);
-			$node_name      = substr($string, $start + 1, $pos - $start - 1);
-			$do_lexeme_read = 0;
-
-			print "index() => node name: $node_name\n" if ($self -> verbose > 1);
-
-			$self -> node($node_name);
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
 		}
-		elsif ($event_name eq 'directed_edge')
+		elsif ($event_name =~ /(?:(?:|un)directed_edge)/)
 		{
-			$self -> edge($lexeme);
-		}
-		elsif ($event_name eq 'undirected_edge')
-		{
-			$self -> edge($lexeme);
+			$pos     = $self -> recce -> lexeme_read($event_name);
+			$literal = substr($string, $start, $pos - $start);
+
+			$self -> _add_daughter('edge_id', {value => $self -> clean_after($literal)});
 		}
 		else
 		{
-			die "Unexpected lexeme '$lexeme_name' with a pause\n";
+			die "Unexpected lexeme '$event_name' with a pause\n";
 		}
 
-		$pos = $self -> recce -> lexeme_read($lexeme_name) if ($do_lexeme_read);
-
-		print "lexeme_read($lexeme_name) => $pos\n" if ($self -> verbose > 1);
+		$last_event = $event_name;
     }
 
+	if ($self -> recce -> ambiguity_metric > 1)
+	{
+		$self -> log(notice => 'Ambiguous parse');
+	}
+
+	if (my $ambiguous_status = $self -> recce -> ambiguous)
+	{
+		$self -> log(notice => "Parse is ambiguous: $ambiguous_status.");
+	}
+
 	# Return a defined value for success and undef for failure.
+	# The length test means we return success for empty input.
 
 	return $self -> recce -> value;
 
-} # End of process.
+} # End of _process.
 
-# -----------------------------------------------
+# --------------------------------------------------
 
-sub renumber_items
+sub _process_brace
 {
-	my($self)  = @_;
-	my(@item)  = @{$self -> items};
-	my($count) = 0;
+	my($self, $name) = @_;
 
-	my(@new);
+	# When a '{' is encountered, the last thing pushed becomes it's parent.
+	# Likewise, if '}' is encountered, we pop the stack.
 
-	for my $item (@item)
+	my($stack) = $self -> stack;
+
+	if ($name eq '{')
 	{
-		$$item{count} = ++$count;
+		my(@daughters) = $$stack[$#$stack] -> daughters;
 
-		push @new, $item;
+		push @$stack, $daughters[$#daughters];
+
+		$self -> _process_token('literal', $name);
+	}
+	else
+	{
+		$self -> _process_token('literal', $name);
+
+		pop @$stack;
+
+		$self -> stack($stack);
 	}
 
-	$self -> items(Set::Array -> new(@new) );
+} # End of _process_brace.
 
-} # End of renumber_items.
+# ------------------------------------------------
 
-# -----------------------------------------------
-
-sub report
+sub _process_html
 {
-	my($self) = @_;
+	my($self, $recce, $fields, $string, $length, $pos) = @_;
 
-	print $self -> format_token
-	({
-		count => 'Item',
-		name  => 'Name',
-		type  => 'Type',
-		value => '',
-	}), "\n";
+	my($bracket_count) = 0;
+	my($open_bracket)  = '<';
+	my($close_bracket) = '>';
+	my($previous_char) = '';
+	my($label)         = '';
 
-	for my $item ($self -> items -> print)
+	my($char);
+
+	while ($pos < $length)
 	{
-		print $self -> format_token($item), "\n";
+		$char  = substr($string, $pos, 1);
+		$label .= $char;
+
+		if ($previous_char eq '\\')
+		{
+		}
+		elsif ($char eq $open_bracket)
+		{
+			$bracket_count++;
+		}
+		elsif ($char eq $close_bracket)
+		{
+			$bracket_count--;
+
+			if ($bracket_count == 0)
+			{
+				$pos++;
+
+				last;
+			}
+		}
+
+		$previous_char = $char;
+
+		$pos++;
 	}
 
-} # End of report.
+	$label = $self -> clean_after($label);
+
+	if ( ($label =~ /^</) && ($label !~ /^<.*>$/) )
+	{
+		my($line, $column) = $recce -> line_column;
+
+		die "Mismatched <> in HTML !$label! at (line, column) = ($line, $column)\n";
+	}
+
+	push @$fields, $label;
+
+	return $self -> _skip_separator($string, $length, $pos, ';');
+
+} # End of _process_html.
+
+# ------------------------------------------------
+
+sub _process_label
+{
+	my($self, $recce, $fields, $string, $length, $pos) = @_;
+
+	$pos = $self -> _skip_separator($string, $length, $pos, ':');
+
+	return $pos if ($pos >= $length);
+
+	my($char) = substr($string, $pos, 1);
+
+	if ($char eq "'")
+	{
+		$pos = $self -> _process_quotes($recce, $fields, $string, $length, $pos, "'");
+	}
+	elsif ($char eq '"')
+	{
+		$pos = $self -> _process_quotes($recce, $fields, $string, $length, $pos, '"');
+	}
+	elsif ($char eq '<')
+	{
+		$pos = $self -> _process_html($recce, $fields, $string, $length, $pos);
+	}
+	else
+	{
+		$pos = $self -> _process_unquoted($recce, $fields, $string, $length, $pos);
+	}
+
+	for (my $i = 0; $i < $#$fields; $i += 2)
+	{
+		$self -> _add_daughter($$fields[$i], {value => $$fields[$i + 1]});
+	}
+
+	return $pos;
+
+} # End of _process_label.
+
+# ------------------------------------------------
+
+sub _process_quotes
+{
+	my($self, $recce, $fields, $string, $length, $pos, $terminator) = @_;
+
+	my($previous_char) = '';
+	my($label)         = '';
+	my($quote_count)   = 0;
+
+	my($char);
+
+	while ($pos < $length)
+	{
+		$char = substr($string, $pos, 1);
+
+		if ( ($previous_char ne '\\') && ($char eq $terminator) )
+		{
+			$quote_count++;
+
+			if ($quote_count == 2)
+			{
+				$label .= $char;
+
+					$pos++;
+
+				last;
+			}
+		}
+
+		$label         .= $char;
+		$previous_char = $char;
+
+		$pos++;
+	}
+
+	# Don't call clean_after, since it removes the ' and " we are about to check.
+
+	$label =~ s/^\s+//;
+	$label =~ s/\s+$//;
+
+	if ( ($label =~ /^['"]/) && ($label !~ /^(['"]).*\1$/) )
+	{
+		# Use ' and " here just for the UltraEdit syntax hiliter.
+
+		my($line, $column) = $recce -> line_column;
+
+		die "Mismatched quotes in label !$label! at (line, column) = ($line, $column)\n";
+	}
+
+	$label = $self -> clean_after($label);
+
+	push @$fields, $label;
+
+	$self -> log(debug => "_process_quotes(). Label !$label!");
+
+	return $self -> _skip_separator($string, $length, $pos, ';');
+
+} # End of _process_quotes.
+
+# --------------------------------------------------
+
+sub _process_token
+{
+	my($self, $name, $value) = @_;
+
+	$self -> _add_daughter($name, {value => $value});
+
+} # End of _process_token.
+
+# ------------------------------------------------
+
+sub _process_unquoted
+{
+	my($self, $recce, $fields, $string, $length, $pos) = @_;
+	my($re) = qr/[;}]/;
+
+	if (substr($string, $pos, 1) =~ $re)
+	{
+		push @$fields, '';
+
+		return $pos;
+	}
+
+	my($previous_char) = '';
+	my($label)         = '';
+	my($quote_count)   = 0;
+
+	my($char);
+
+	while ($pos < $length)
+	{
+		$char = substr($string, $pos, 1);
+
+		last if ( ($previous_char ne '\\') && ($char =~ $re) );
+
+		$label         .= $char;
+		$previous_char = $char;
+
+		$pos++;
+	}
+
+	$label = $self -> clean_after($label);
+
+	push @$fields, $label;
+
+	return $self -> _skip_separator($string, $length, $pos, ';');
+
+} # End of _process_unquoted.
 
 # --------------------------------------------------
 
@@ -688,11 +728,11 @@ sub run
 
 	if ($self -> description)
 	{
-		$self -> get_graph_from_command_line;
+		$self -> _get_graph_from_command_line;
 	}
 	elsif ($self -> input_file)
 	{
-		$self -> get_graph_from_file;
+		$self -> graph_text(join(' ', grep{! m!^(?:#|//)!} read_file($self -> input_file, binmode => ':encoding(utf-8)') ) );
 	}
 	else
 	{
@@ -705,36 +745,53 @@ sub run
 
 	try
 	{
-		if (defined $self -> process)
+		if (defined (my $value = $self -> _process) )
 		{
-			$self -> renumber_items;
-			$self -> report if ($self -> report_tokens);
-
-			my($file_name) = $self -> token_file;
-
-			$self -> generate_token_file($file_name) if ($file_name);
+			$self -> log(info => join("\n", @{$self -> tree -> tree2string}) );
 		}
 		else
 		{
 			$result = 1;
 
-			print "Parse failed\n";
+			$self -> log(error => 'Parse failed');
 		}
 	}
 	catch
 	{
 		$result = 1;
 
-		print "Parse failed. Error: $_\n";
+		$self -> log(error => "Parse failed. Error: $_");
 	};
 
 	# Return 0 for success and 1 for failure.
 
-	print "Parse result: $result (0 is success)\n" if ($self -> verbose);
+	$self -> log(info => "Parse result: $result (0 is success)");
 
 	return $result;
 
 } # End of run.
+
+# ------------------------------------------------
+
+sub _skip_separator
+{
+	my($self, $string, $length, $pos, $separator) = @_;
+	my($re) = qr/[\s$separator]/;
+
+	my($char);
+
+	while ($pos < $length - 1)
+	{
+		$char = substr($string, $pos, 1);
+
+		last if ($char !~ $re);
+
+		$pos++;
+	}
+
+	return $pos;
+
+} # End of _skip_separator.
 
 # --------------------------------------------------
 
@@ -744,53 +801,66 @@ sub run
 
 =head1 NAME
 
-L<MarpaX::Demo::StringParser> - Conditional preservation of whitespace while parsing
+L<MarpaX::Demo::StringParser> - A Marpa-based parser for the DASH language
 
 =head1 Synopsis
 
 Typical usage:
 
-	perl -Ilib scripts/parse.pl -d '[node]{color:blue; label: "Node name"}' -r 1 -v 1 -t output.tokens
+	perl -Ilib scripts/parse.pl -de '[node]{color:blue; label: "Node name"}' -max info
+	perl -Ilib scripts/parse.pl -i data/node.04.dash -max info
 
-The following refer to data shipped with the distro:
+You can use scripts/parse.sh to simplify this process, but it assumes you're input file is in data/:
 
-	perl -Ilib scripts/parse.pl -i data/node.04.ge -r 1 -t node.04.tokens
-	diff data/node.04.tokens node.04.tokens
+	scripts/parse.sh node.04 -max info
 
-You can use scripts/parse.sh to simplify this process:
+See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for sample
+input and output.
 
-	scripts/parse.sh data/node.04.ge node.04.tokens -r 1
-
-See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for sample output.
-
-Also, there is L<an article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html> based on
-this module.
+Also, see L<the article|http://savage.net.au/Ron/html/Conditional.preservation.of.whitespace.html>
+based on this module.
 
 =head1 Description
 
-This module demonstrations how to use L<Marpa::R2>'s capabilities to have Marpa repeatedly pass control back to code
-in your own module, during the parse, to handle certain cases where you don't want Marpa's default processing to occur.
+This module implements a parser for L</DASH> (below), a wrapper language around Graphviz's
+L<DOT|http://graphviz.org/content/dot-language>. That is, the module is a pre-processor for the
+DOT language.
 
-Specifically, it deals with the classic case of when you wish to preserve whitespace in some contexts, but also
-want Marpa to discard whitespace in all other contexts.
+Specifically, this module demonstrates how to use L<Marpa::R2>'s capabilities to have Marpa
+repeatedly pass control back to code in your own module, during the parse, to handle those cases
+where you don't want Marpa's default processing to occur.
 
-Note that this module's usage of Marpa's adverbs I<event> and I<pause> should be regarded as an intermediate/advanced
-technique. For people just beginning to use Marpa, use of the I<action> adverb is the recommended technique.
+This allows the code to deal with the classic case of where you wish to preserve whitespace in some
+contexts, but also want Marpa to discard whitespace in all other contexts.
 
-The article mentioned above discusses important issues regarding the timing sequence of I<pauses> and I<actions>.
+DASH is easier to use than DOT, which means the user can specify graphs very simply, without having
+to learn DOT.
 
-All this assumes a relatively recent version of Marpa, one in which its Scanless interface (SLIF) is implemented.
-All my development was done using L<Marpa::R2> V 2.064000.
+The DASH language is actually a cut-down version of the language used by L<Graph::Easy>. For a full
+explanation of the Graph::Easy language, see L<http://bloodgate.com/perl/graph/manual/>.
 
-Lastly, L<MarpaX::Demo::StringParser> is a cut-down version of L<Graph::Easy::Marpa> V 2.00, and (the former)
-provides a Marpa-based parser for parts of L<Graph::Easy::Marpa>-style graph definitions. The latter module handles
-the whole Graph::Easy::Marpa language.
+The wrapper is parsed into a tree of tokens managed by L<Tree:DAG_Node>.
 
-See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?> for details.
-And see below, L</What is the grammar parsed by this module?>, for details of the parts supported by this module.
+If requested by the user, the tree is passed to the default renderer
+L<MarpaX::Demo::StringParser::Renderer>. Various options allow the user to control the output, as
+an SVG (PNG, ...) image, and to save the DOT version of the graph.
 
-In pragmatic terms, the code in the current module was developed for inclusion in L<Graph::Easy::Marpa>, which in
-turn is a pre-processor for the L<DOT|http://graphviz.org/content/dot-language> language.
+In the past, the code in this module was part of Graph::Easy::Marpa, but that latter module has
+been deleted from CPAN, and all it's new code and features, together with bug fixes, is in the
+current module.
+
+Note that this module's usage of Marpa's adverbs I<event> and I<pause> should be regarded as an
+intermediate/advanced technique. For people just beginning to use Marpa, use of the I<action> adverb
+is the recommended technique.
+
+The article mentioned above discusses important issues regarding the timing sequence of I<pauses>
+and I<actions>.
+
+All this assumes a relatively recent version of Marpa, one in which its Scanless interface (SLIF)
+is implemented. I'm currently (2014-10-10) using L<Marpa::R2> V 2.096000.
+
+Lastly, the parser and renderer will be incorporated into the next major release (V 2.00) of
+L<GraphViz2::Marpa>, which parses DOT files.
 
 =head1 Installation
 
@@ -826,35 +896,24 @@ All scripts are shipped in the scripts/ directory.
 
 =item o copy.config.pl
 
-This is for use by the author. It just copies the config file out of the distro, so the script generate.index.pl
-(which uses HTML template stuff) can find it.
+This is for use by the author. It just copies the config file out of the distro, so the script
+generate.index.pl (which uses HTML template stuff) can find it.
 
 =item o find.config.pl
 
 This cross-checks the output of copy.config.pl.
 
-=item o ge2tokens.pl
+=item o dash2svg.pl
 
-This transforms all data/*.ge files into their corresponding data/*.tokens files.
+Converts all data/*.dash files into the corresponding html/*.svg files.
+
+Used by generate.demo.sh.
 
 =item o generate.demo.sh
 
-This runs:
+This generates all the SVG files for the data/*.dash files, and then generates html/index.html.
 
-=over 4
-
-=item o perl -Ilib scripts/ge2tokens.pl
-
-=item o perl -Ilib ~/bin/ge2svg.pl
-
-See the article mentioned in the Synopsis for details on this script. Briefly, it is not included in the distro
-because it has Graph::Easy::Marpa::Renderer::GraphViz2 as a pre-req.
-
-=item o perl -Ilib scripts/generate.index.pl
-
-=back
-
-And then generate.demo.sh copies the demo output to my dev web server's doc root, where I can cross-check it.
+And then it copies the demo output to my dev web server's doc root, where I can cross-check it.
 
 =item o generate.index.pl
 
@@ -862,7 +921,7 @@ This constructs a web page containing all the html/*.svg files.
 
 =item o parse.pl
 
-This runs a parse on a single input file. Run .parse.pl -h' for details.
+This runs a parse on a single input file. Run 'parse.pl -h' for details.
 
 =item o parse.sh
 
@@ -870,8 +929,17 @@ This simplifies running parse.pl.
 
 =item o pod2html.sh
 
-This converts all lib/*.pm files into their corresponding *.html versions, for proof-reading and uploading
-to my real web site.
+This converts all lib/*.pm files into their corresponding *.html versions, for proof-reading and
+uploading to my real web site.
+
+=item o render.pl
+
+This runs a parse on a single input file, and coverts the output into an SVG file. Run 'render.pl -h'
+for details.
+
+=item o render.sh
+
+This simplifies running render.pl.
 
 =back
 
@@ -913,39 +981,51 @@ The I<description> key takes precedence over the I<input_file> key.
 
 Default: ''.
 
-=item o report_tokens => $Boolean
+=item o logger => $logger_object
 
-When set to 1, calls L</report()> to print the items recognized by the parser.
+Specify a logger object.
 
-Default: 0.
+To disable logging, just set logger to the empty string.
 
-=item o token_file => $file_name
+Default: An object of type L<Log::Handler>.
 
-The name of the CSV file in which parsed tokens are to be saved.
+=item o maxlevel => $level
 
-If '', the file is not written.
+This option is only used if this module creates an object of type L<Log::Handler>.
 
-Default: ''.
+See L<Log::Handler::Levels>.
 
-=item o verbose => $integer
+Default: 'notice'. A typical choice is 'info' or 'debug'.
 
-Prints more (1, 2) or less (0) progress messages.
+=item o minlevel => $level
 
-Default: 0.
+This option is only used if this module creates an object of type L<Log::Handler>.
+
+See L<Log::Handler::Levels>.
+
+Default:  'error'.
+
+No lower levels are used.
 
 =back
 
 =head1 Methods
 
-=head2 attribute_list($attribute_list)
+=head2 clean_before($s)
 
-Returns nothing.
+Cleans the input string before the next step in the parse process.
 
-Processes the attribute string found when Marpa pauses during the processing of a set of attributes.
+Typically only ever called once.
 
-Then, pushes these attributes onto a stack.
+Returns the cleaned string.
 
-The stack's elements are documented below in L</FAQ> under L</How is the parsed graph stored in RAM?>.
+=head2 clean_after($s)
+
+Cleans the input string after each step in the parse process.
+
+Typically called many times, once on each output token.
+
+Returns the cleaned string.
 
 =head2 description([$graph])
 
@@ -958,64 +1038,6 @@ See also the L</input_file([$graph_file_name])> method.
 The value supplied to the description() method takes precedence over the value read from the input file.
 
 Also, I<description> is an option to new().
-
-=head2 edge($edge_name)
-
-Returns nothing.
-
-Processes the edge name string returned by L<Marpa::R2> when it pauses during the processing of '->' or '--'.
-
-Pushes this edge name onto a stack.
-
-The stack's elements are documented below in the L</FAQ> under L</How is the parsed graph stored in RAM?>.
-
-=head2 find_terminator($stringref, $target, $start)
-
-Returns the offset into $stringref at which the $target is found.
-
-$stringref is a refererence to the input string (stream).
-
-$target is a regexp specifying the closing delimiter to search for.
-
-For attributes, it is qr/}/, and for nodes, $target is qr/]/.
-
-$start is the offset into $stringref at which to start searching. It's assumed to be pointed to the opening
-delimiter when this method is called, since the value is $start is set by Marpa when it pauses based on the
-C<< 'pause => before' >> construct in the grammar.
-
-The return value allows the calling code to extract the substring between the opening and closing delimiters,
-and to process it in either L</attribute_list($attribute_list)> or L</node($node_name)>.
-
-=head2 format_token($item)
-
-Returns a string containing a nicely formatted version of the keys and values of the hashref $item.
-
-$item must be an element of the stack of tokens output by the parse.
-
-The stack's elements are documented below in L</FAQ> under L</How is the parsed graph stored in RAM?>.
-
-=head2 generate_token_file($file_name)
-
-Returns nothing.
-
-Writes a CSV file of tokens output by the parse if new() was called with the C<token_file> option.
-
-=head2 get_graph_from_command_line()
-
-If the caller has requested a graph be parsed from the command line, with the I<description> option to new(),
-get it now.
-
-Called as appropriate by run().
-
-=head2 get_graph_from_file()
-
-If the caller has requested a graph be parsed from a file, with the I<input_file> option to new(), get it now.
-
-Called as appropriate by run().
-
-=head2 grammar()
-
-Returns an object of type L<Marpa::R2::Scanless::G>.
 
 =head2 graph_text([$graph])
 
@@ -1039,41 +1061,9 @@ The value supplied to the description() method takes precedence over the value r
 
 Also, I<input_file> is an option to new().
 
-=head2 node()
+=head2 log($level, $s)
 
-Returns nothing.
-
-Processes the node name string returned by L<Marpa::R2> when it pauses during the processing of '[' ... ']'.
-
-Then, pushes this node name onto a stack.
-
-The stack's elements are documented below in the L</FAQ> under L</How is the parsed graph stored in RAM?>.
-
-=head2 process()
-
-Returns the result of calling Marpa's value() method.
-
-Does the real work. Called by run() after processing the user's options.
-
-=head2 recce()
-
-Returns an object of type L<Marpa::R2::Scanless::R>.
-
-=head2 renumber_items()
-
-Ensures each item in the stack as a sequential number 1 .. N.
-
-=head2 report()
-
-Reports (prints) the list of items recognized by the parser.
-
-=head2 report_tokens([0 or 1])
-
-Here, the [] indicate an optional parameter.
-
-Gets or sets the value which determines whether or not to report the items recognised by the parser.
-
-Also, I<report_tokens> is an option to new().
+If a logger is defined, this logs the message $s at level $level.
 
 =head2 run()
 
@@ -1081,316 +1071,196 @@ This is the only method the caller needs to call. All parameters are supplied to
 
 Returns 0 for success and 1 for failure.
 
-=head2 verbose([0 .. 2])
+=head2 recce()
 
-Here, the [] indicate an optional parameter.
+Returns an object of type L<Marpa::R2::Scanless::R>.
 
-Gets or sets the value which determines how many progress reports are printed.
+=head2 tree()
 
-Also, I<verbose> is an option to new().
+Returns an object of type L<Tree::DAG_Node>.
+
+=head1 DASH Syntax
+
+See L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/> for sample
+input and output.
+
+The examples in the following sections are almost all taken from data/*.dash, in the distro.
+
+=head2 Graphs in DASH
+
+	1: A graph definition may continue over multiple lines.
+	2: Lines beginning with either '#' or '//' are discarded as comments.
+	3: A node name or an edge name must never be split over multiple lines.
+	4: Attributes may be split over lines, but do not split either the name or value of the
+		attribute over multiple lines.
+		Note: Attribute values can contain escaped characters.
+
+Examples:
+
+	1: A graph split over 10 lines:
+		[node.1] {label: "n 1"}
+		-> {label: 'e 1'}
+		-> {label: e 2}
+		[] {label: n 2}
+		-> {label  :  e 3}
+		[node.3] {label: "n 3"}
+		-> {label: 'e 4'},
+		-> {label: e 5}
+		[] {label: n 2}
+		-> {label  :  e 6}
+	2: A graph split over 14 lines:
+		->
+		->
+
+		[node]
+		[node] ->
+		-> {label: Start} -> {color: red} [node.1] {color: green} -> [node.2]
+		[node.1] [node.2] [node.3]
+
+		[]
+		[node.1]
+		[node 1]
+		['node.2']
+		["node.3"]
+		[     From here     ] -> [     To there     ]
+
+=head2 Nodes in DASH
+
+Node names:
+
+	1: Are delimited by '[' and ']'.
+	2: May be quoted with " or '.
+	3: Allow escaped characters, using '\'.
+	4: Allow internal spaces, even if not quoted.
+	5: May be separated with nothing (juxtaposed), with whitespace, or with ','.
+		This is called 'Daisy-chaining'.
+
+See L<Daisy chains|https://en.wikipedia.org/wiki/Daisy_chain> for the origin of this term.
+
+Examples:
+
+	1: The anonymous node: []
+	2: The anonymous node, with attributes (explained below): []{color:red}
+	3: A named node: [Marpa]
+	4: Juxtaposed nodes: [Perl][Marpa] or [Perl]  [Marpa] or [Perl], [Marpa]
+	5: A named node with an internal space: [Perl 6]
+	6: A named node with attributes: [node.1]{label: A and B}
+	7: A named node with spaces: [    node.1    ]
+		These spaces are discarded.
+	8: A named node with attributes, with spaces: [  node.1  ] { label : '  A  Z  '  }
+		The spaces around 'node.1' are discarded.
+		The spaces around '  A  Z  ' are discarded.
+		The spaces inside '  A  Z  ' are preserved (because of the quotes).
+		Double-quotes act in the same way.
+	9: A named node with attributes, with spaces:
+		[ node.1 ] {  label  :  Flight Path from Melbourne to London  }
+		Space preservation is as above.
+	10: A named node with escaped characters: [\[node\]]
+		The '[' and ']' chars are preserved.
+	11: A named node with [] in name: [[ \]]
+		However, since '[' and ']' delimit node names, you are I<strongly> advised to escape such
+		characters.
+	12: A named node with quotes, spaces, and escaped chars: [" a \' b \" c"]
+	13: A complete graph:
+		[node.1]
+		-> {arrowhead: odot; arrowtail: ediamond; color: green; dir: both; label: A 1; penwidth: 1}
+		-> {color: blue; label: B 2; penwidth: 3}
+		-> {arrowhead: box; arrowtail: invdot; color: maroon; dir: both; label: C 3; penwidth: 5}
+		[] {label: 'Some node'}
+		-> [node.2]
+
+=head2 Edges in DASH
+
+Edge names:
+
+	1: Are '->'
+		This is part of a directed graph.
+	2: Or '--'
+		This is part of an undirected graph.
+	3: May be separated with nothing (juxtaposed), with whitespace, or with ','.
+		This is called 'Daisy-chaining'.
+
+See L<Daisy chains|https://en.wikipedia.org/wiki/Daisy_chain> for the origin of this term.
+
+It makes no sense to combine '->' and '--' in a single graph, because Graphviz will automatically
+reject such input. In other words, directed and undirected graphs are mutually exclusive.
+
+So, if any edge in your graph is undirected (you use '--'), then every edge must use '--' and the
+same for '->'.
+
+Examples:
+
+	1: An edge with attributes: -> {color:cornflowerblue; label: This edge's color is blueish ;}
+	2: Juxtaposed edges without any spacing and without attributes: ------
+	3: Juxtaposed edges (without comma) with attributes:
+		-- {color: cornflowerblue; label: Top row\nBottom row}
+		-- {color:red; label: Edges use cornflowerblue and red}
+	4: An edge with attributes, with some escaped characters:
+		-> {color:cornflowerblue; label: Use various escaped chars (\' \" \< \>) in label}
+
+=head2 Attributes in DASH
+
+Attributes:
+
+	1: Are delimited by '{' and '}'.
+	2: Consist of a C<name> and a C<value>, separated by ':'.
+	3: Are separated by ';'.
+	4: The DOT language defines a set of escape characters acceptable in such a C<value>.
+	5: Allow quotes and whitespace as per node names.
+		This must be true because the same non-Marpa parsers are used for both.
+	6: Attribute values can be HTML-like. See the Graphviz docs for why we say 'HTML-like' and
+		not HTML. See data/table.*.ge for examples.
+
+See L<HTML-like labels|http://www.graphviz.org/content/node-shapes#html> for details.
+
+Examples:
+
+	1: -- {color: cornflowerblue; label: Top row\nBottom row}
+		Note the use of '\n' in the value of the label.
 
 =head1 FAQ
 
 =head2 What is the grammar parsed by this module?
 
-It's a cut-down version of the L<Graph::Easy::Marpa> language.
-See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?>.
+See L</DASH> just above.
 
-Firstly, a summary:
+=head2 How is the parsed graph stored in RAM?
 
-	Element        Syntax
-	---------------------
-	Edge names     Either '->' or '--'
-	---------------------
-	Node names     1: Delimited by '[' and ']'.
-	               2: May be quoted with " or '.
-	               3: Escaped characters, using '\', are allowed.
-	               4: Internal spaces in node names are preserved even if not quoted.
-	---------------------
-	Attributes     1: Delimited by '{' and '}'.
-	               2: Within that, any number of "key : value" pairs separated by ';'.
-	               3: Values may be quoted with " or ' or '<...>' or '<<table>...</table>>'.
-	               4: Escaped characters, using '\', are allowed.
-	               5: Internal spaces in attribute values are preserved even if not quoted.
-	---------------------
+Items are stored in a tree managed by L<Tree::DAG_Node>.
 
-Note: Both edges and nodes can have attributes.
+The sample code in the L</Synopsis> will display a tree:
 
-Note: HTML-like labels trigger special-case processing in Graphviz.
-See L</Why doesn't the parser handle my HTML-style labels?> below.
+	perl -Ilib scripts/parse.pl -i data/node.04.dash -max info
 
-Demo page:
+Output:
 
-	L<http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>
-	L<Graph::Easy::Marpa|http://savage.net.au/Perl-modules/html/graph.easy.marpa/>
+	root. Attributes: {uid => "0"}
+	   |---prolog. Attributes: {uid => "1"}
+	   |---graph. Attributes: {uid => "2"}
+	       |---node_id. Attributes: {uid => "3", value => "node.1"}
+	       |   |---literal. Attributes: {uid => "4", value => "{"}
+	       |   |---label. Attributes: {uid => "5", value => "A and B"}
+	       |   |---literal. Attributes: {uid => "6", value => "}"}
+	       |---node_id. Attributes: {uid => "7", value => "node.2"}
+	           |---literal. Attributes: {uid => "8", value => "{"}
+	           |---label. Attributes: {uid => "9", value => "A or B"}
+	           |---literal. Attributes: {uid => "10", value => "}"}
+	Parse result: 0 (0 is success)
 
-The latter page utilizes the entire  L<Graph::Easy::Marpa> language.
-See L<Graph::Easy::Marpa::Parser/What is the Graph::Easy::Marpa language?>.
+See also the next question.
 
-And now the details:
+=head2 What is the structure of the tree of parsed tokens?
 
-=over 4
+From the previous answer, you can see the root has 2 daughters, with the 'prolog' daughter not
+currently used. It is used by L<GraphViz2::Marpa>.
 
-=item o Attributes
-
-Both nodes and edges can have any number of attributes.
-
-Attributes are delimited by '{' and '}'.
-
-These attributes are listed immdiately after their owing node or edge.
-
-Each attribute consists of a key:value pair, where ':' must appear literally.
-
-These key:value pairs must be separated by the ';' character. A trailing ';' is optional.
-
-The values for 'key' are reserved words used by Graphviz's L<attributes|http://graphviz.org/content/attrs>.
-These keys match the regexp /^[a-zA-Z_]+$/.
-
-For the 'value', any printable character can be used.
-
-Some escape sequences are a special meaning within L<Graphviz|http://www.graphviz.org/content/attrs>.
-
-E.g. if you use [node name] {label: \N}, then if that graph is input to Graphviz's I<dot>, \N will be replaced
-by the name of the node.
-
-Some literals - ';', '}', '<', '>', '"', "'" - can be used in the attribute's value, but they must satisfy one
-of these conditions. They must be:
-
-=over 4
-
-=item o Escaped using '\'.
-
-Eg: \;, \}, etc.
-
-=item o Placed inside " ... "
-
-=item o Placed inside ' ... '
-
-=item o Placed inside <...>
-
-This does I<not> mean you can use <<Some text>>. See the next point.
-
-=item o Placed inside <<table> ... </table>>
-
-Using this construct allows you to use HTML entities such as &amp;, &lt;, &gt; and &quot;.
-
-=back
-
-Internal spaces are preserved within an attribute's value, but leading and trailing spaces are not (unless quoted).
-
-Samples:
-
-	[node.1] {color: red; label: Green node}
-	-> {penwidth: 5; label: From Here to There}
-	[node.2]
-	-> {label: "A literal semicolon '\;' in a label"}
-
-Note: That '\;' does not actually need those single-quote characters, since it is within a set of double-quotes.
-
-Note: Attribute values quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
-
-=item o Comments
-
-The first few lines of the input file can start with /^\s*#/, and will be discarded as comments.
-
-=item o Daisy-chains
-
-See L<Wikipedia|https://en.wikipedia.org/wiki/Daisy_chain> for the origin of this term.
-
-=over 4
-
-=item o Edges
-
-Edges can be daisy-chained by juxtaposition, or by using a comma (','), newline, space, or attributes ('{...}')
-to separate them.
-
-Hence both of these are valid: '->,->{color:green}' and '->{color:red}->{color:green}'.
-
-See data/edge.02.ge and data/edge.06.ge.
-
-=item o Groups
-
-Groups can be daisy chained by juxtaposition, or by using a newline or space to separate them.
-
-=item o Nodes
-
-Nodes can be daisy-chained by juxtaposition, or by using a comma (','), newline, space, or attributes ('{...}')
-to separate them.
-
-Hence all of these are valid: '[node.1][node.2]' and '[node.1],[node.2]' and '[node.1]{color:red}[node.2]'.
-
-=back
-
-=item o Edges
-
-Edge names are either '->' or '--'.
-
-No other edge names are accepted.
-
-Note: The syntax for edges is just a visual clue for the user. The I<directed> 'v' I<undirected> nature of the
-graph depends on the value of the 'directed' attribute present (explicitly or implicitly) in the input stream.
-Nevertheless, usage of '->' or '--' must match the nature of the graph, or Graphviz will issue a syntax error.
-
-Samples:
-
-	->
-	--
-
-=item o Graphs
-
-Graphs are sequences of nodes and edges, in any order.
-
-The sample given just above for attributes is in fact a single graph.
-
-A sample:
-
-	[node]
-	[node] ->
-	-> {label: Start} -> {color: red} [node.1] {color: green} -> [node.2]
-	[node.1] [node.2] [node.3]
-
-For more samples, see the data/*.ge files shipped with the distro.
-
-=item o Line-breaks
-
-These are converted into a single space.
-
-=item o Nodes
-
-Nodes are delimited by '[' and ']'.
-
-Within those, any printable character can be used for a node's name.
-
-Some literals - ']', '"', "'" - can be used in the node's value, but they must satisfy one of these
-conditions. They must be:
-
-=over 4
-
-=item o Escaped using '\'
-
-Eg: \].
-
-=item o Placed inside " ... "
-
-=item o Placed inside ' ... '
-
-=back
-
-Internal spaces are preserved within a node's name, but leading and trailing spaces are not (unless quoted).
-
-Lastly, the node's name can be empty. I.e.: You use '[]' in the input stream to create an anonymous node.
-
-Samples:
-
-	[]
-	[node.1]
-	[node 1]
-	[[node\]]
-	["[node]"]
-	[     From here     ] -> [     To there     ]
-
-Note: Node names quoted with a balanced pair or single- or double-quotes will have those quotes stripped.
-
-=back
+The 'graph' daughter (sub-tree) is what's processed by the default rendering engine
+L<MarpaX::Demo::StringParser::Renderer> to convert the tree (i.e. the input file) into a DOT file
+and into an image.
 
 =head2 Does this module handle utf8?
 
 Yes. See the last sample on L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
-
-=head2 How is the parsed graph stored in RAM?
-
-Items are stored in an arrayref managed by L<Set::Array>. This arrayref is available via the L</items()> method.
-
-Each element in the array is a hashref, listed here in alphabetical order by type.
-
-Note: Items are numbered from 1 up.
-
-=over 4
-
-=item o Attributes
-
-An attribute can belong to a node or an edge. An attribute definition of
-'{color: red;}' would produce a hashref of:
-
-	{
-		count => $n,
-		name  => 'color',
-		type  => 'attribute',
-		value => 'red',
-	}
-
-An attribute definition of '{color: red; shape: circle}' will produce 2 hashrefs,
-i.e. 2 sequential elements in the arrayref:
-
-	{
-		count => $n,
-		name  => 'color',
-		type  => 'attribute',
-		value => 'red',
-	}
-
-	{
-		count => $n + 1,
-		name  => 'shape',
-		type  => 'attribute',
-		value => 'circle',
-	}
-
-Attribute hashrefs appear in the arrayref immediately after the item (edge or node) to which they belong.
-
-=item o Edges
-
-An edge definition of '->' would produce a hashref of:
-
-	{
-		count => $n,
-		name  => '->',
-		type  => 'edge',
-		value => '',
-	}
-
-=item o Nodes
-
-A node definition of '[Name]' would produce a hashref of:
-
-	{
-		count => $n,
-		name  => 'Name',
-		type  => 'node',
-		value => '',
-	}
-
-A node can have a definition of '[]', which means it has no name. Such nodes are called anonymous (or
-invisible) because while they take up space in the output stream, they have no printable or visible
-characters if the output stream is turned into a graph by Graphviz's
-L<dot|http://www.graphviz.org/Documentation.php> program.
-
-Each anonymous node will have at least these 2 attributes:
-
-	{
-		count => $n,
-		name  => '',
-		type  => 'node',
-		value => '',
-	}
-
-	{
-		count => $n + 1,
-		name  => 'color',
-		type  => 'attribute',
-		value => 'invis',
-	}
-
-You can of course give your anonymous nodes any attributes, but they will be forced to have
-these attributes.
-
-E.g. If you give it a color, that would become element $n + 2 in the arrayref, and hence that color would override
-the default color 'invis'. See the output for data/node.03.ge on
-L<the demo page|http://savage.net.au/Perl-modules/html/marpax.demo.stringparser/>.
-
-Node names are case-sensitive in C<dot>, but that does not matter within the context of this module.
-
-=back
 
 =head2 Why doesn't the parser handle my HTML-style labels?
 
@@ -1400,15 +1270,7 @@ Traps for young players:
 
 =item o The <br /> component must include the '/'
 
-=item o If any tag's attributes use double-quotes, they will be doubled in the CSV output file
-
-That is, just like double-quotes everywhere else.
-
 =back
-
-See L<http://www.graphviz.org/content/dot-language> for details of Graphviz's HTML-like syntax.
-
-See data/table.*.ge for a set of examples.
 
 =head2 Why do I get error messages like the following?
 
@@ -1434,13 +1296,9 @@ The keywords are: node, edge, graph, digraph, subgraph and strict. Compass point
 See L<keywords|http://www.graphviz.org/content/dot-language> in the discussion of the syntax of DOT
 for details.
 
-=head2 Where are the action subs named in the grammar?
-
-In L<MarpaX::Demo::StringParser::Actions>.
-
 =head2 What is the homepage of Marpa?
 
-L<http://jeffreykegler.github.io/Ocean-of-Awareness-blog/>.
+L<http://savage.net.au/Marpa.html>.
 
 =head2 How do I reconcile Marpa's approach with classic lexing and parsing?
 

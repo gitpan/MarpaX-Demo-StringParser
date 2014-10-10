@@ -9,7 +9,7 @@ use File::Basename; # For basename().
 
 use Moo;
 
-our $VERSION = '1.09';
+our $VERSION = '2.00';
 
 # ------------------------------------------------
 
@@ -17,9 +17,9 @@ sub get_files
 {
 	my($self, $dir_name, $type) = @_;
 
-	opendir(INX, $dir_name);
-	my(@file) = sort grep{/$type$/} readdir INX;
-	closedir INX;
+	opendir(my $fh, $dir_name);
+	my(@file) = sort grep{/$type$/} readdir $fh;
+	closedir $fh;
 
 	my(%file);
 
@@ -44,7 +44,7 @@ L<MarpaX::Demo::StringParser::Filer> - Utils used by MarpaX::Demo::StringParser
 
 =head1 Synopsis
 
-See scripts/ge2tokens.pl and t/ge2tokens.t.
+Returns a hash of files' basenames and their names. Used by L<MarpaX::Demo::StringParser::Utils>.
 
 =head1 Description
 
@@ -105,9 +105,7 @@ Key-value pairs accepted in the parameter list:
 
 =head2 get_files($dir_name, $type)
 
-Returns a list of files from the given $dir_name, whose type (extension) matches $type.
-
-See scripts/ge2tokens.pl and t/ge2tokens.t.
+Returns a hash of files from the given $dir_name, whose type (extension) matches $type.
 
 =head1 Version Numbers
 
