@@ -19,9 +19,17 @@ use Text::CSV;
 
 use Tree::DAG_Node;
 
-use Types::Standard qw/Any ArrayRef Int Str/;
+use Types::Standard qw/Any ArrayRef HashRef Int Str/;
 
 use Try::Tiny;
+
+has bnf =>
+(
+	default  => sub{return ''},
+	is       => 'rw',
+	isa      => Any,
+	required => 0,
+);
 
 has description =>
 (
@@ -35,7 +43,7 @@ has grammar =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-	isa      => Any, # 'Marpa::R2::Scanless::G',
+	isa      => Any, # 'Marpa::R2::Scanless::G'.
 	required => 0,
 );
 
@@ -79,11 +87,19 @@ has minlevel =>
 	required => 0,
 );
 
+has known_events =>
+(
+	default  => sub{return {} },
+	is       => 'rw',
+	isa      => HashRef,
+	required => 0,
+);
+
 has recce =>
 (
 	default  => sub{return ''},
 	is       => 'rw',
-	isa      => Any, # 'Marpa::R2::Scanless::R',
+	isa      => Any, # 'Marpa::R2::Scanless::R'.
 	required => 0,
 );
 
@@ -111,7 +127,7 @@ has uid =>
 	required => 0,
 );
 
-our $VERSION = '2.00';
+our $VERSION = '2.01';
 
 # --------------------------------------------------
 # For accepted and rejected by Marpa, see
@@ -138,11 +154,9 @@ sub BUILD
 
 	# Policy: Event names are always the same as the name of the corresponding lexeme.
 
-	$self -> grammar
+	$self -> bnf
 	(
-		Marpa::R2::Scanless::G -> new
-		({
-source					=> \(<<'END_OF_GRAMMAR'),
+<<'END_OF_GRAMMAR'
 
 :default				::= action => [values]
 
@@ -239,9 +253,16 @@ undirected_edge			~ '--'
 whitespace				~ [\s]+
 
 END_OF_GRAMMAR
-		})
 	);
 
+	$self -> grammar
+	(
+		Marpa::R2::Scanless::G -> new
+		({
+			source => \$self -> bnf
+		})
+
+	);
 	$self -> recce
 	(
 		Marpa::R2::Scanless::R -> new
@@ -249,6 +270,15 @@ END_OF_GRAMMAR
 			grammar => $self -> grammar,
 		})
 	);
+
+	my(%event);
+
+	for my $line (split(/\n/, $self -> bnf) )
+	{
+		$event{$1} = 1 if ($line =~ /event\s+=>\s+(\w+)/);
+	}
+
+	$self -> known_events(\%event);
 
 	# Since $self -> tree has not been initialized yet,
 	# we can't call our _add_daughter() until after this statement.
@@ -346,11 +376,12 @@ sub log
 
 sub _process
 {
-	my($self)       = @_;
-	my($string)     = $self -> clean_before($self -> graph_text);
-	my($length)     = length $string;
-	my($last_event) = '';
-	my($format)     = '%-20s    %5s    %5s    %-s';
+	my($self)         = @_;
+	my($known_events) = $self -> known_events;
+	my($string)       = $self -> clean_before($self -> graph_text);
+	my($length)       = length $string;
+	my($last_event)   = '';
+	my($format)       = '%-20s    %5s    %5s    %-s';
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
 
@@ -378,23 +409,31 @@ sub _process
 			die "The code only handles 1 event at a time\n";
 		}
 
-		$event_name     = ${$event[0]}[0];
+		$event_name = ${$event[0]}[0];
+
+		if (! $$known_events{$event_name})
+		{
+			$literal = "Unexpected event name '$event_name'";
+
+			$self -> log(error => $literal);
+
+			die "$literal\n";
+		}
+
 		($start, $span) = $self -> recce -> pause_span;
 		$lexeme         = $self -> recce -> literal($start, $span);
+		$pos            = $self -> recce -> lexeme_read($event_name);
+		$literal        = substr($string, $start, $pos - $start);
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $lexeme) );
 
 		if ($event_name eq 'attribute_name')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			push @fields, $self -> clean_after($literal);
 		}
 		elsif ($event_name eq 'attribute_value')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = $self -> clean_after(substr($string, $start, $pos - $start) );
+			$literal = $self -> clean_after($literal);
 
 			$self -> _add_daughter($fields[0], {value => $literal});
 
@@ -404,18 +443,16 @@ sub _process
 
 			while ( ($pos < (length($string) - 1) ) && (substr($string, $pos, 1) =~ /[\s;]/) ) { $pos++ };
 		}
+		elsif ($event_name eq 'directed_edge')
+		{
+			$self -> _add_daughter('edge_id', {value => $self -> clean_after($literal)});
+		}
 		elsif ($event_name eq 'end_attributes')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			$self -> _process_brace($literal);
 		}
 		elsif ($event_name eq 'end_node')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			# Is this the anonymous node?
 
 			if ($last_event eq 'start_node')
@@ -425,9 +462,6 @@ sub _process
 		}
 		elsif ($event_name eq 'literal_label')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			push @fields, $literal;
 
 			$pos    = $self -> _process_label($self -> recce, \@fields, $string, $length, $pos);
@@ -435,33 +469,21 @@ sub _process
 		}
 		elsif ($event_name eq 'node_name')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = $self -> clean_after(substr($string, $start, $pos - $start) );
+			$literal = $self -> clean_after($literal);
 
 			$self -> _add_daughter('node_id', {value => $literal});
 		}
 		elsif ($event_name eq 'start_attributes')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			$self -> _process_brace($literal);
 		}
 		elsif ($event_name eq 'start_node')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
+			# Do nothing.
 		}
-		elsif ($event_name =~ /(?:(?:|un)directed_edge)/)
+		elsif ($event_name eq 'undirected_edge')
 		{
-			$pos     = $self -> recce -> lexeme_read($event_name);
-			$literal = substr($string, $start, $pos - $start);
-
 			$self -> _add_daughter('edge_id', {value => $self -> clean_after($literal)});
-		}
-		else
-		{
-			die "Unexpected lexeme '$event_name' with a pause\n";
 		}
 
 		$last_event = $event_name;

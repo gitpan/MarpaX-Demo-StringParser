@@ -1,5 +1,10 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+2.01  Sat Oct 11 12:02:00 2014
+	- Validate event names differently.
+	- Simplify the code in the main loop, _process().
+	- Fix data/graph.04.dash.
+
 2.00  Thu Oct  9 17:39:00 2014
 	- Re-write the grammar for DASH (a wrapper around Graphviz's DOT), and also re-write the
 		non-Marpa parsers for the strings with internal spaces.

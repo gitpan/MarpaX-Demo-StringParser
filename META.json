@@ -61,23 +61,23 @@
    "provides" : {
       "MarpaX::Demo::StringParser" : {
          "file" : "lib/MarpaX/Demo/StringParser.pm",
-         "version" : "2.00"
+         "version" : "2.01"
       },
       "MarpaX::Demo::StringParser::Config" : {
          "file" : "lib/MarpaX/Demo/StringParser/Config.pm",
-         "version" : "2.00"
+         "version" : "2.01"
       },
       "MarpaX::Demo::StringParser::Filer" : {
          "file" : "lib/MarpaX/Demo/StringParser/Filer.pm",
-         "version" : "2.00"
+         "version" : "2.01"
       },
       "MarpaX::Demo::StringParser::Renderer" : {
          "file" : "lib/MarpaX/Demo/StringParser/Renderer.pm",
-         "version" : "2.00"
+         "version" : "2.01"
       },
       "MarpaX::Demo::StringParser::Utils" : {
          "file" : "lib/MarpaX/Demo/StringParser/Utils.pm",
-         "version" : "2.00"
+         "version" : "2.01"
       }
    },
    "release_status" : "stable",
@@ -89,5 +89,5 @@
          "url" : "https://github.com/ronsavage/MarpaX-Demo-StringParser"
       }
    },
-   "version" : "2.00"
+   "version" : "2.01"
 }
