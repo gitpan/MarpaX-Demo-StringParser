@@ -67,7 +67,7 @@ $class -> new
 		Text::CSV        => 1.32,
 		Text::CSV::Slurp => 1.01,
 		Text::Xslate     => 1.4001,
-		Tree::DAG_Node   => 1.22,
+		Tree::DAG_Node   => 1.23,
 		Try::Tiny        => 0.09,
 		Types::Standard  => 1.000004,
 		utf8             => 0,

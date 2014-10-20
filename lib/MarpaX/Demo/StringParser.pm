@@ -127,7 +127,7 @@ has uid =>
 	required => 0,
 );
 
-our $VERSION = '2.01';
+our $VERSION = '2.02';
 
 # --------------------------------------------------
 # For accepted and rejected by Marpa, see
@@ -161,6 +161,8 @@ sub BUILD
 :default				::= action => [values]
 
 lexeme default			=  latm => 1		# Longest Acceptable Token Match.
+
+:start					::= graph_grammar
 
 graph_grammar			::= graph_definition
 
@@ -376,16 +378,15 @@ sub log
 
 sub _process
 {
-	my($self)         = @_;
-	my($known_events) = $self -> known_events;
-	my($string)       = $self -> clean_before($self -> graph_text);
-	my($length)       = length $string;
-	my($last_event)   = '';
-	my($format)       = '%-20s    %5s    %5s    %-s';
+	my($self)       = @_;
+	my($string)     = $self -> clean_before($self -> graph_text);
+	my($length)     = length $string;
+	my($last_event) = '';
+	my($format)     = '%-20s    %5s    %5s    %-s';
 
 	# We use read()/lexeme_read()/resume() because we pause at each lexeme.
 
-	my(@event, $event_count, $event_name, $edge);
+	my($event_name, $edge);
 	my(@fields);
 	my($lexeme, $literal);
 	my($span, $start);
@@ -399,37 +400,17 @@ sub _process
 		$pos = $self -> recce -> resume($pos)
 	)
 	{
-		@event       = @{$self -> recce -> events};
-		$event_count = scalar @event;
-
-		if ($event_count > 1)
-		{
-			$self -> log(error => "Event count: $event_count. Names: " . join(', ', map{${$_}[0]} @event) . '.');
-
-			die "The code only handles 1 event at a time\n";
-		}
-
-		$event_name = ${$event[0]}[0];
-
-		if (! $$known_events{$event_name})
-		{
-			$literal = "Unexpected event name '$event_name'";
-
-			$self -> log(error => $literal);
-
-			die "$literal\n";
-		}
-
+		$event_name     = $self -> _validate_event;
 		($start, $span) = $self -> recce -> pause_span;
-		$lexeme         = $self -> recce -> literal($start, $span);
 		$pos            = $self -> recce -> lexeme_read($event_name);
 		$literal        = substr($string, $start, $pos - $start);
+		$lexeme         = $self -> recce -> literal($start, $span);
 
 		$self -> log(debug => sprintf($format, $event_name, $start, $span, $lexeme) );
 
 		if ($event_name eq 'attribute_name')
 		{
-			push @fields, $self -> clean_after($literal);
+			$fields[0] = $self -> clean_after($literal);
 		}
 		elsif ($event_name eq 'attribute_value')
 		{
@@ -500,7 +481,6 @@ sub _process
 	}
 
 	# Return a defined value for success and undef for failure.
-	# The length test means we return success for empty input.
 
 	return $self -> recce -> value;
 
@@ -815,6 +795,36 @@ sub _skip_separator
 
 } # End of _skip_separator.
 
+# ------------------------------------------------
+
+sub _validate_event
+{
+	my($self)        = @_;
+	my(@event)       = @{$self -> recce -> events};
+	my($event_count) = scalar @event;
+
+	if ($event_count > 1)
+	{
+		$self -> log(error => "Events triggered: $event_count (should be 1). Names: " . join(', ', map{${$_}[0]} @event) . '.');
+
+		die "The code only handles 1 event at a time\n";
+	}
+
+	my($event_name) = ${$event[0]}[0];
+
+	if (! ${$self -> known_events}{$event_name})
+	{
+		my($msg) = "Unexpected event name '$event_name'";
+
+		$self -> log(error => $msg);
+
+		die "$msg\n";
+	}
+
+	return $event_name;
+
+} # End of _validate_event.
+
 # --------------------------------------------------
 
 1;
@@ -1085,7 +1095,7 @@ Also, I<input_file> is an option to new().
 
 =head2 log($level, $s)
 
-If a logger is defined, this logs the message $s at level $level.
+Calls $self -> logger -> log($level => $s) if ($self -> logger).
 
 =head2 run()
 
@@ -1115,7 +1125,11 @@ The examples in the following sections are almost all taken from data/*.dash, in
 	3: A node name or an edge name must never be split over multiple lines.
 	4: Attributes may be split over lines, but do not split either the name or value of the
 		attribute over multiple lines.
-		Note: Attribute values can contain escaped characters.
+		Note: Attribute values can contain various escaped characters, e.g. \n.
+	5: A graph may start or end with an edge, and even have contiguous edges.
+		See data/edge.06.dash (or the demo page). Graphviz does not allow any of these
+		possibilities, so the default renderer fabricates anonymous nodes and inserts them where
+		they will satisfy the requirements of Graphviz.
 
 Examples:
 

@@ -1,5 +1,13 @@
 Revision history for Perl extension MarpaX::Demo::StringParser.
 
+2.02  Fri Oct 17 09:35:00 2014
+	- Add explicit start rule to BNF, although Marpa allows this to be optional.
+	- Expand the DASH definition of a graph to include starting or ending graphs with edges, or
+		using contiguous edges. Explain these are not accepted by Graphviz, but the default renderer
+		compensates, to keep Graphviz happy.
+	- Bump required version of Tree::DAG_Node to 1.23, because of the latter's recent change in
+		output format, as emitted by tree2string().
+
 2.01  Sat Oct 11 12:02:00 2014
 	- Validate event names differently.
 	- Simplify the code in the main loop, _process().
